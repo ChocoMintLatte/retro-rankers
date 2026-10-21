@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RETRO RANKERS - CSE FESTIVAL ARCADE BOOTH</title>
+  
+  <!-- Google Fonts: Press Start 2P -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Arcade Cabinet Outer Wrapper -->
+  <div class="arcade-cabinet">
+    
+    <!-- Top Arcade Header Marquee -->
+    <header class="arcade-header">
+      <div class="header-left">
+        <h1 class="marquee-title neon-text-magenta">RETRO RANKERS</h1>
+        <span class="marquee-subtitle neon-text-cyan">CSE FESTIVAL ARCADE BOOTH</span>
+      </div>
+
+      <div class="header-center">
+        <div class="credit-badge">
+          <span class="badge-icon">●</span>
+          <span class="badge-text">CREDIT: FREE PLAY</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="soundToggleBtn" class="arcade-btn" type="button" aria-label="Toggle Sound">
+          <span class="btn-icon">🔊</span> SOUND: <span class="sound-state">ON</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main 3-Column Arcade Floor -->
+    <main class="arcade-main">
+      
+      <!-- Left Panel: Cartridge Selection & Controls Guide (20%) -->
+      <aside class="left-panel">
+        <!-- Game Cartridge Selector -->
+        <section class="panel-section cartridge-section">
+          <div class="section-title-bar">
+            <span class="section-badge">SELECT</span>
+            <h2 class="section-title">CARTRIDGES</h2>
+          </div>
+          <div id="cartridgeList" class="cartridge-list">
+            <div class="cartridge-item active" data-game="tetris" tabindex="0">
+              <div class="cartridge-notch"></div>
+              <div class="cartridge-label">
+                <span class="cartridge-id">01</span>
+                <div class="cartridge-info">
+                  <span class="cartridge-name">NEON TETRIS</span>
+                  <span class="cartridge-desc">Classic Block Puzzle</span>
+                </div>
+              </div>
+              <div class="cartridge-pins"></div>
+            </div>
+
+            <div class="cartridge-item" data-game="dodge" tabindex="0">
+              <div class="cartridge-notch"></div>
+              <div class="cartridge-label">
+                <span class="cartridge-id">02</span>
+                <div class="cartridge-info">
+                  <span class="cartridge-name">CYBER DODGE</span>
+                  <span class="cartridge-desc">360° Bullet Survival</span>
+                </div>
+              </div>
+              <div class="cartridge-pins"></div>
+            </div>
+
+            <div class="cartridge-item" data-game="mathRunner" tabindex="0">
+              <div class="cartridge-notch"></div>
+              <div class="cartridge-label">
+                <span class="cartridge-id">03</span>
+                <div class="cartridge-info">
+                  <span class="cartridge-name">MATH RUNNER</span>
+                  <span class="cartridge-desc">Fake Ad Gate Shooter</span>
+                </div>
+              </div>
+              <div class="cartridge-pins"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Controls Guide Box -->
+        <section class="panel-section controls-section">
+          <div class="section-title-bar">
+            <span class="section-badge">GUIDE</span>
+            <h2 class="section-title">CONTROLS</h2>
+          </div>
+          <div id="controlsGuide" class="controls-guide-box">
+            <div class="control-row">
+              <div class="keycap-group">
+                <kbd class="keycap">←</kbd>
+                <kbd class="keycap">→</kbd>
+              </div>
+              <span class="key-desc">좌우 이동 / 슬롯 이동</span>
+            </div>
+            <div class="control-row">
+              <div class="keycap-group">
+                <kbd class="keycap">↑</kbd>
+                <kbd class="keycap">↓</kbd>
+              </div>
+              <span class="key-desc">블록 회전 / 조작 / 문자 변경</span>
+            </div>
+            <div class="control-row">
+              <div class="keycap-group">
+                <kbd class="keycap">SPACE</kbd>
+              </div>
+              <span class="key-desc">하드 드롭 / 부스터 / 점프</span>
+            </div>
+            <div class="control-row">
+              <div class="keycap-group">
+                <kbd class="keycap">ENTER</kbd>
+              </div>
+              <span class="key-desc">게임 시작 / 입력 확인</span>
+            </div>
+            <div class="control-row">
+              <div class="keycap-group">
+                <kbd class="keycap">ESC</kbd>
+              </div>
+              <span class="key-desc">일시정지 / 메인 화면</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Center Main View: CRT Monitor Screen & Canvas (55%) -->
+      <section class="center-panel">
+        <div class="crt-bezel">
+          <div class="crt-screen">
+            <!-- Scanline Overlay & Vignette -->
+            <div class="crt-scanlines"></div>
+            <div class="crt-vignette"></div>
+
+            <!-- Arcade Canvas: 600x750 (4:5 Aspect Ratio) -->
+            <canvas id="gameCanvas" width="600" height="750"></canvas>
+
+            <!-- Attract Screen Overlay -->
+            <div id="attractOverlay" class="attract-overlay">
+              <div class="attract-content">
+                <div class="attract-logo-wrap">
+                  <span class="attract-tag">NOW LOADING ARCADE</span>
+                  <h2 id="attractGameTitle" class="attract-title neon-text-cyan">NEON TETRIS</h2>
+                  <p id="attractGameDesc" class="attract-desc">Classic Block Puzzle with Cyberpunk Speed Rush</p>
+                </div>
+
+                <div class="attract-score-box">
+                  <span class="score-label">ALL TIME HIGH SCORE</span>
+                  <span id="attractHighScore" class="score-value neon-text-gold">050,000</span>
+                </div>
+
+                <div class="attract-prompt-wrap">
+                  <div class="blink-prompt neon-text-green">INSERT COIN / PRESS [ENTER] TO START</div>
+                  <div class="attract-subprompt">OR CLICK CARTRIDGE TO SWITCH GAME</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Arcade 3-Digit Initial Modal Overlay (NO <input> tags allowed!) -->
+            <div id="initialModal" class="initial-modal hidden">
+              <div class="initial-dialog">
+                <div class="modal-header">
+                  <h3 class="modal-title neon-text-magenta">GAME OVER</h3>
+                  <p class="modal-subtitle">ENTER YOUR INITIALS</p>
+                </div>
+
+                <div class="modal-score-wrap">
+                  <span class="modal-score-label">FINAL SCORE</span>
+                  <div id="modalFinalScore" class="modal-score-val neon-text-cyan">000000</div>
+                  <div id="modalValidationBadge" class="modal-badge-verified">
+                    <span class="badge-dot">✔</span> ANTI-CHEAT: VERIFIED
+                  </div>
+                </div>
+
+                <!-- 3 Dial Slots (Controlled via Keyboard/Arrows, strictly without <input>) -->
+                <div id="dialContainer" class="dial-container">
+                  <div class="dial-slot active" data-slot="0">
+                    <button type="button" class="dial-arrow dial-up" tabindex="-1">▲</button>
+                    <div class="dial-char">A</div>
+                    <button type="button" class="dial-arrow dial-down" tabindex="-1">▼</button>
+                  </div>
+                  <div class="dial-slot" data-slot="1">
+                    <button type="button" class="dial-arrow dial-up" tabindex="-1">▲</button>
+                    <div class="dial-char">A</div>
+                    <button type="button" class="dial-arrow dial-down" tabindex="-1">▼</button>
+                  </div>
+                  <div class="dial-slot" data-slot="2">
+                    <button type="button" class="dial-arrow dial-up" tabindex="-1">▲</button>
+                    <div class="dial-char">A</div>
+                    <button type="button" class="dial-arrow dial-down" tabindex="-1">▼</button>
+                  </div>
+                </div>
+
+                <div class="initial-controls-legend">
+                  <span>↑/↓: 문자 변경</span>
+                  <span class="divider">|</span>
+                  <span>←/→: 슬롯 이동</span>
+                  <span class="divider">|</span>
+                  <span>A-Z: 직접 입력</span>
+                  <span class="divider">|</span>
+                  <span class="enter-hint">[ENTER]: 등록</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Leaderboard TOP 10 & Live Feed Ticker (25%) -->
+      <aside class="right-panel">
+        
+        <!-- Top 10 Leaderboard Section -->
+        <section class="panel-section leaderboard-section">
+          <div class="section-title-bar">
+            <span class="section-badge gold-badge">HALL OF FAME</span>
+            <h2 id="leaderboardGameTitle" class="section-title">NEON TETRIS</h2>
+          </div>
+
+          <div class="leaderboard-table-header">
+            <span class="col-rank">RANK</span>
+            <span class="col-init">NAME</span>
+            <span class="col-score">SCORE</span>
+            <span class="col-date">STAGE</span>
+          </div>
+
+          <div id="leaderboardBody" class="leaderboard-body">
+            <!-- Dynamically populated rows; sample markup structure: -->
+            <div class="rank-row rank-1">
+              <span class="col-rank">#01</span>
+              <span class="col-init">AAA</span>
+              <span class="col-score">050,000</span>
+              <span class="col-date">LV.15</span>
+            </div>
+            <div class="rank-row rank-2">
+              <span class="col-rank">#02</span>
+              <span class="col-init">NEO</span>
+              <span class="col-score">042,500</span>
+              <span class="col-date">LV.12</span>
+            </div>
+            <div class="rank-row rank-3">
+              <span class="col-rank">#03</span>
+              <span class="col-init">CYB</span>
+              <span class="col-score">038,100</span>
+              <span class="col-date">LV.10</span>
+            </div>
+            <div class="rank-row">
+              <span class="col-rank">#04</span>
+              <span class="col-init">CSE</span>
+              <span class="col-score">031,200</span>
+              <span class="col-date">LV.08</span>
+            </div>
+            <div class="rank-row">
+              <span class="col-rank">#05</span>
+              <span class="col-init">PXL</span>
+              <span class="col-score">028,400</span>
+              <span class="col-date">LV.07</span>
+            </div>
+            <div class="rank-row">
+              <span class="col-rank">#06</span>
+              <span class="col-init">DOS</span>
+              <span class="col-score">022,900</span>
+              <span class="col-date">LV.06</span>
+            </div>
+            <div class="rank-row">
+              <span class="col-rank">#07</span>
+              <span class="col-init">BOB</span>
+              <span class="col-score">019,500</span>
+              <span class="col-date">LV.05</span>
+            </div>
+            <div class="rank-row">
+              <span class="col-rank">#08</span>
+              <span class="col-init">WIN</span>
+              <span class="col-score">015,200</span>
+              <span class="col-date">LV.04</span>
+            </div>
+            <div class="rank-row">
+              <span class="col-rank">#09</span>
+              <span class="col-init">MAX</span>
+              <span class="col-score">011,000</span>
+              <span class="col-date">LV.03</span>
+            </div>
+            <div class="rank-row">
+              <span class="col-rank">#10</span>
+              <span class="col-init">ACE</span>
+              <span class="col-score">008,500</span>
+              <span class="col-date">LV.02</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Live Feed Ticker Section -->
+        <section class="panel-section livefeed-section">
+          <div class="section-title-bar feed-title-bar">
+            <span class="live-pulse"></span>
+            <h2 class="section-title">LIVE FEED</h2>
+          </div>
+          <div id="liveFeedList" class="live-feed-list">
+            <div class="feed-item">
+              <span class="feed-time">12:45</span>
+              <span class="feed-msg"><strong class="cyan">NEO</strong> 42,500pt 갱신!</span>
+            </div>
+            <div class="feed-item">
+              <span class="feed-time">12:38</span>
+              <span class="feed-msg"><strong class="magenta">CYB</strong> 신규 랭커 진입</span>
+            </div>
+            <div class="feed-item">
+              <span class="feed-time">12:20</span>
+              <span class="feed-msg"><strong class="green">CSE</strong> FESTIVAL BOOTH OPEN</span>
+            </div>
+          </div>
+        </section>
+
+      </aside>
+
+    </main>
+  </div>
+
+  <!-- Arcade Core Scripts (Classic non-module scripts for file:// protocol compatibility) -->
+  <script src="js/sound.js"></script>
+  <script src="js/ranking.js"></script>
+  <script src="js/games/tetris.js"></script>
+  <script src="js/games/dodge.js"></script>
+  <script src="js/games/mathRunner.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
