@@ -1,38 +1,42 @@
 /**
  * ============================================================================
  * RETRO RANKERS - NEON TETRIS (js/games/tetris.js)
- * Classic 10x20 Grid Tetris with Cyberpunk Neon Aesthetic & Rush Mechanics
+ * High-Performance Competitive Cyberpunk Tetris Benchmarked Against TETR.IO
  * ============================================================================
  * 
- * Strict Specification Compliance:
+ * TETR.IO Benchmark Specifications & Handling:
  * - 600x750 Canvas Layout:
- *   - Main 10x20 board on left (cell size 32px -> 320x640px at x=40, y=55)
- *   - Glowing cyan neon frame & dark cyberpunk grid
- *   - Right HUD panel (x=390, y=55, width=170): 6-digit SCORE, LEVEL, LINES,
- *     NEXT tetromino preview box, and key hints
- * - 7 standard tetrominoes (I, O, T, S, Z, J, L) via 7-bag randomizer
- * - Vibrant neon colors (#00FFFF, #FFFF00, #B026FF, #39FF14, #FF0055, #3366FF, #FF8800)
- *   with beveled highlights & outer glow
- * - Ghost Piece: lowest valid Y position rendered as semi-transparent dashed outline
- * - Controls:
- *   - ArrowLeft / ArrowRight: move left/right (sound.playMove())
- *   - ArrowUp: clockwise rotation with [0, -1, 1, -2, 2] wall kicks (sound.playRotate())
- *   - ArrowDown: soft drop (+1 pt/cell)
- *   - Space: hard drop (+2 pts/cell, impact particles, immediate lock, sound.playHit())
- * - Line Clear: 1/2/3/4 lines = 100 / 300 / 500 / 800 * level points (sound.playScore())
- * - Level increases every 10 lines; drop speed accelerates:
- *   Math.max(0.08, 0.8 - (level - 1) * 0.065) seconds
- * - GameLog tracking: { gameId: 'tetris', linesCleared, maxLevel, hardDrops }
- *   calling callbacks.onGameOver(finalScore, gameLog)
+ *   - Main 10x20 Board (32px cells -> 320x640px at x=40, y=55)
+ *   - Dynamic Vertical Board Spring Reaction on Hard Drops & Line Clears
+ *   - Right HUD Panel (x=390, y=55, width=170) containing SCORE, LEVEL/LINES,
+ *     HOLD box (with lock state indicator), NEXT box, and full CONTROLS card.
+ * - HOLD Feature (`C` or `Shift` key):
+ *   - Stores piece key ('I', 'T', etc.) in `this.holdPiece`, once per piece lock.
+ *   - Clean swap or pull from nextPiece, resets drop/lock timers and moves.
+ * - TETR.IO Rotation & Super Rotation System (SRS) Wall/Floor Kicks:
+ *   - Clockwise Rotation: `ArrowUp`, `KeyX`, `KeyW`
+ *   - Counter-Clockwise Rotation: `KeyZ`, `ControlLeft`, `ControlRight`
+ *   - 180° Rotation: `KeyA`
+ *   - Comprehensive SRS kicks: [[0,0], [-1,0], [1,0], [0,-1], [-1,-1], [1,-1], [-2,0], [2,0], [0,-2]]
+ * - Extended Placement Lock Delay & Anti-Stall Mechanics:
+ *   - Grounded detection does NOT immediately lock pieces on gravity or soft drop.
+ *   - `lockDelay = 0.5s`, resets on grounded moves/rotations up to `maxLockMoves = 15`.
+ *   - Real-time subtle Lock Delay gauge and piece pulse glow when grounded.
+ * - Instantaneous DAS / ARR / Soft Drop:
+ *   - Zero dead-zone direction switching with `moveDir` tracking (-1, 1, 0).
+ *   - `dasDelay = 0.11` (110ms), `dasInterval = 0.025` (25ms fast ARR).
+ *   - `softDropInterval = 0.025` (fast TETR.IO SDF).
+ * - Exact class interface: `window.NeonTetris(canvas, callbacks)` with
+ *   `start()`, `stop()`, `update(dt)`, `render(ctx)`, `handleKeyDown(e)`, `handleKeyUp(e)`.
  */
 
 (function () {
   'use strict';
 
-  // --- Tetromino Definitions ---
+  // --- Tetromino Definitions (Standard SRS Orientations) ---
   const TETROMINOES = {
     I: {
-      color: '#00FFFF', // Cyan
+      color: '#6EC6E6', // Pastel Sky Blue
       matrix: [
         [0, 0, 0, 0],
         [1, 1, 1, 1],
@@ -43,7 +47,7 @@
       spawnY: -1
     },
     O: {
-      color: '#FFFF00', // Yellow
+      color: '#F4C552', // Mustard Gold
       matrix: [
         [1, 1],
         [1, 1]
@@ -52,7 +56,7 @@
       spawnY: 0
     },
     T: {
-      color: '#B026FF', // Purple
+      color: '#B388EB', // Pastel Lavender
       matrix: [
         [0, 1, 0],
         [1, 1, 1],
@@ -62,7 +66,7 @@
       spawnY: 0
     },
     S: {
-      color: '#39FF14', // Neon Green
+      color: '#7BE092', // Pastel Mint Green
       matrix: [
         [0, 1, 1],
         [1, 1, 0],
@@ -72,7 +76,7 @@
       spawnY: 0
     },
     Z: {
-      color: '#FF0055', // Neon Pink/Red
+      color: '#F2546D', // Patch Rose Red
       matrix: [
         [1, 1, 0],
         [0, 1, 1],
@@ -82,7 +86,7 @@
       spawnY: 0
     },
     J: {
-      color: '#3366FF', // Neon Blue
+      color: '#5C85D6', // Soft Royal Blue
       matrix: [
         [1, 0, 0],
         [1, 1, 1],
@@ -92,7 +96,7 @@
       spawnY: 0
     },
     L: {
-      color: '#FF8800', // Neon Orange
+      color: '#F7A072', // Warm Peach/Apricot
       matrix: [
         [0, 0, 1],
         [1, 1, 1],
@@ -131,6 +135,45 @@
     return rotated;
   }
 
+  // Helper: Rotate NxN matrix counter-clockwise
+  function rotateMatrixCCW(matrix) {
+    const N = matrix.length;
+    const rotated = [];
+    for (let r = 0; r < N; r++) {
+      rotated[r] = [];
+      for (let c = 0; c < N; c++) {
+        rotated[r][c] = matrix[c][N - 1 - r];
+      }
+    }
+    return rotated;
+  }
+
+  // Helper: Rotate NxN matrix 180 degrees
+  function rotateMatrix180(matrix) {
+    const N = matrix.length;
+    const rotated = [];
+    for (let r = 0; r < N; r++) {
+      rotated[r] = [];
+      for (let c = 0; c < N; c++) {
+        rotated[r][c] = matrix[N - 1 - r][N - 1 - c];
+      }
+    }
+    return rotated;
+  }
+
+  // SRS Kick Offsets (Testing wall, floor, and corner kicks)
+  const SRS_KICKS = [
+    [0, 0],
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [-1, -1],
+    [1, -1],
+    [-2, 0],
+    [2, 0],
+    [0, -2]
+  ];
+
   class NeonTetris {
     constructor(canvas, callbacks = {}) {
       this.canvas = canvas;
@@ -149,7 +192,7 @@
       this.boardWidth = this.cols * this.cellSize;   // 320px
       this.boardHeight = this.rows * this.cellSize; // 640px
 
-      // HUD Configuration
+      // Right HUD Configuration
       this.hudX = 390;
       this.hudY = 55;
       this.hudWidth = 170;
@@ -160,27 +203,48 @@
       this.currentPiece = null;
       this.nextPiece = null;
 
+      // HOLD System
+      this.holdPiece = null;
+      this.canHold = true;
+
+      // Stats
       this.score = 0;
       this.level = 1;
       this.linesCleared = 0;
       this.maxLevel = 1;
       this.hardDrops = 0;
 
+      // Timers & State
       this.dropTimer = 0;
       this.running = false;
       this.gameOver = false;
 
-      // Auto-repeat / Soft drop controls state
+      // TETR.IO Lock Delay Mechanics (0.5s lock window, max 15 move resets)
+      this.lockDelay = 0.5;
+      this.maxLockMoves = 15;
+      this.lockTimer = 0;
+      this.lockMoves = 0;
+      this.lowestY = 0;
+
+      // TETR.IO Handling: Instantaneous DAS / ARR / Soft Drop
+      this.moveDir = 0; // -1 = left, 1 = right, 0 = neutral
+      this.leftPressed = false;
+      this.rightPressed = false;
       this.keyState = {
         ArrowLeft: false,
         ArrowRight: false,
         ArrowDown: false
       };
       this.dasTimer = 0;
-      this.dasDelay = 0.16;
-      this.dasInterval = 0.05;
+      this.arrTimer = 0;
+      this.dasDelay = 0.11;        // 110ms snappy DAS
+      this.dasInterval = 0.025;    // 25ms fast ARR
       this.softDropTimer = 0;
-      this.softDropInterval = 0.045;
+      this.softDropInterval = 0.025; // 25ms fast TETR.IO SDF
+
+      // Physical Board Spring Simulation
+      this.boardBounceY = 0;
+      this.boardBounceVy = 0;
 
       // Visual effects & Juice
       this.particles = [];
@@ -202,7 +266,7 @@
           sound[soundName]();
         }
       } catch (e) {
-        // Safe fail: audio should never crash gameplay
+        // Audio errors should never crash game loop
       }
     }
 
@@ -227,19 +291,41 @@
       this.running = false;
       this.gameOver = false;
 
+      // Reset HOLD
+      this.holdPiece = null;
+      this.canHold = true;
+
+      // Reset Lock Delay
+      this.lockTimer = 0;
+      this.lockMoves = 0;
+      this.lowestY = 0;
+
+      // Reset Movement & Handling
+      this.moveDir = 0;
+      this.leftPressed = false;
+      this.rightPressed = false;
+      this.dasTimer = 0;
+      this.arrTimer = 0;
+      this.softDropTimer = 0;
+      this.keyState.ArrowLeft = false;
+      this.keyState.ArrowRight = false;
+      this.keyState.ArrowDown = false;
+
+      // Reset Board Spring
+      this.boardBounceY = 0;
+      this.boardBounceVy = 0;
+
+      // Reset Effects
       this.particles = [];
       this.floatingTexts = [];
       this.lineClearEffects = [];
       this.screenShake = 0;
 
-      this.keyState.ArrowLeft = false;
-      this.keyState.ArrowRight = false;
-      this.keyState.ArrowDown = false;
-
       // Fill initial 7-bag and pull initial pieces
       this.fillBag();
       this.currentPiece = this.pullNextPiece();
       this.nextPiece = this.pullNextPiece();
+      this.lowestY = this.currentPiece ? this.currentPiece.y : 0;
     }
 
     start() {
@@ -282,7 +368,7 @@
     }
 
     // -------------------------------------------------------------
-    // Collision Detection
+    // Collision Detection & Ground Status
     // -------------------------------------------------------------
     isValid(matrix, posX, posY) {
       const size = matrix.length;
@@ -300,7 +386,7 @@
             if (by >= this.rows) {
               return false;
             }
-            // Overlap with locked cells (allow cells above board y < 0)
+            // Overlap with locked cells (cells above board by < 0 are allowed)
             if (by >= 0 && this.board[by][bx] !== null) {
               return false;
             }
@@ -308,6 +394,11 @@
         }
       }
       return true;
+    }
+
+    isGrounded() {
+      if (!this.currentPiece) return false;
+      return !this.isValid(this.currentPiece.matrix, this.currentPiece.x, this.currentPiece.y + 1);
     }
 
     // -------------------------------------------------------------
@@ -323,31 +414,139 @@
     }
 
     // -------------------------------------------------------------
-    // Rotation & Movement Actions
+    // Extended Placement Lock Delay Management
+    // -------------------------------------------------------------
+    onPieceManipulated(wasGrounded) {
+      if (!this.currentPiece) return;
+      const isGroundedNow = this.isGrounded();
+
+      // If piece was grounded or is now grounded, perform move-reset
+      if (wasGrounded || isGroundedNow) {
+        if (this.lockMoves < this.maxLockMoves) {
+          this.lockTimer = 0;
+          this.lockMoves++;
+        }
+      } else {
+        // If piece is suspended in air, lockTimer stays cleared
+        this.lockTimer = 0;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Movement Actions
     // -------------------------------------------------------------
     move(dir) {
-      if (!this.running || this.gameOver || !this.currentPiece) return;
+      if (!this.running || this.gameOver || !this.currentPiece) return false;
+      const wasGrounded = this.isGrounded();
       if (this.isValid(this.currentPiece.matrix, this.currentPiece.x + dir, this.currentPiece.y)) {
         this.currentPiece.x += dir;
+        this.onPieceManipulated(wasGrounded);
         this.playSound('playMove');
+        return true;
       }
+      return false;
     }
 
+    // -------------------------------------------------------------
+    // SRS Rotations (CW, CCW, 180° with Wall/Floor Kicks)
+    // -------------------------------------------------------------
     rotateClockwise() {
-      if (!this.running || this.gameOver || !this.currentPiece) return;
+      if (!this.running || this.gameOver || !this.currentPiece) return false;
+      const wasGrounded = this.isGrounded();
       const rotated = rotateMatrix(this.currentPiece.matrix);
-      // Basic wall-kick offsets [0, -1, 1, -2, 2]
-      const offsets = [0, -1, 1, -2, 2];
-      for (const offset of offsets) {
-        if (this.isValid(rotated, this.currentPiece.x + offset, this.currentPiece.y)) {
+
+      for (const [dx, dy] of SRS_KICKS) {
+        if (this.isValid(rotated, this.currentPiece.x + dx, this.currentPiece.y + dy)) {
           this.currentPiece.matrix = rotated;
-          this.currentPiece.x += offset;
+          this.currentPiece.x += dx;
+          this.currentPiece.y += dy;
+          this.onPieceManipulated(wasGrounded);
           this.playSound('playRotate');
-          return;
+          return true;
         }
       }
+      return false;
     }
 
+    rotateCounterClockwise() {
+      if (!this.running || this.gameOver || !this.currentPiece) return false;
+      const wasGrounded = this.isGrounded();
+      const rotated = rotateMatrixCCW(this.currentPiece.matrix);
+
+      for (const [dx, dy] of SRS_KICKS) {
+        if (this.isValid(rotated, this.currentPiece.x + dx, this.currentPiece.y + dy)) {
+          this.currentPiece.matrix = rotated;
+          this.currentPiece.x += dx;
+          this.currentPiece.y += dy;
+          this.onPieceManipulated(wasGrounded);
+          this.playSound('playRotate');
+          return true;
+        }
+      }
+      return false;
+    }
+
+    rotate180() {
+      if (!this.running || this.gameOver || !this.currentPiece) return false;
+      const wasGrounded = this.isGrounded();
+      const rotated = rotateMatrix180(this.currentPiece.matrix);
+
+      for (const [dx, dy] of SRS_KICKS) {
+        if (this.isValid(rotated, this.currentPiece.x + dx, this.currentPiece.y + dy)) {
+          this.currentPiece.matrix = rotated;
+          this.currentPiece.x += dx;
+          this.currentPiece.y += dy;
+          this.onPieceManipulated(wasGrounded);
+          this.playSound('playRotate');
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // -------------------------------------------------------------
+    // HOLD Action (C or Shift)
+    // -------------------------------------------------------------
+    hold() {
+      if (!this.running || this.gameOver || !this.currentPiece || !this.canHold) return;
+
+      const currentKey = this.currentPiece.key;
+
+      if (this.holdPiece === null) {
+        // Move current piece to hold and spawn next piece
+        this.holdPiece = currentKey;
+        this.currentPiece = this.nextPiece;
+        this.nextPiece = this.pullNextPiece();
+      } else {
+        // Swap current piece with hold piece, spawn unrotated at top
+        const toSpawnKey = this.holdPiece;
+        this.holdPiece = currentKey;
+        const def = TETROMINOES[toSpawnKey];
+        this.currentPiece = {
+          key: toSpawnKey,
+          color: def.color,
+          matrix: def.matrix.map(row => [...row]),
+          x: def.spawnX,
+          y: def.spawnY
+        };
+      }
+
+      this.canHold = false;
+      this.dropTimer = 0;
+      this.lockTimer = 0;
+      this.lockMoves = 0;
+      this.lowestY = this.currentPiece ? this.currentPiece.y : 0;
+      this.playSound('playRotate');
+
+      // Check immediate spawn collision -> Game Over
+      if (!this.isValid(this.currentPiece.matrix, this.currentPiece.x, this.currentPiece.y)) {
+        this.triggerGameOver();
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Drops: Soft Drop & Hard Drop
+    // -------------------------------------------------------------
     softDropStep() {
       if (!this.running || this.gameOver || !this.currentPiece) return;
       if (this.isValid(this.currentPiece.matrix, this.currentPiece.x, this.currentPiece.y + 1)) {
@@ -355,15 +554,21 @@
         this.score += 1;
         this.callbacks?.onScoreChange?.(this.score);
         this.dropTimer = 0;
-      } else {
-        this.lockPiece();
+
+        // Reset lock timer and moves if falling below lowest point
+        if (this.currentPiece.y > this.lowestY) {
+          this.lowestY = this.currentPiece.y;
+          this.lockMoves = 0;
+          this.lockTimer = 0;
+        }
       }
+      // Note: If grounded, soft drop does NOT instantly lock! Lock delay handles it.
     }
 
     hardDrop() {
       if (!this.running || this.gameOver || !this.currentPiece) return;
       const ghostY = this.getGhostY();
-      const dropDistance = ghostY - this.currentPiece.y;
+      const dropDistance = Math.max(0, ghostY - this.currentPiece.y);
 
       this.currentPiece.y = ghostY;
       this.score += dropDistance * 2;
@@ -374,6 +579,9 @@
       this.spawnHardDropParticles(this.currentPiece);
       this.screenShake = 0.12;
 
+      // Board spring downward physical reaction
+      this.boardBounceVy = Math.min(180, 75 + dropDistance * 5);
+
       this.lockPiece();
     }
 
@@ -381,6 +589,7 @@
     // Locking & Line Clear Logic
     // -------------------------------------------------------------
     lockPiece() {
+      if (!this.currentPiece) return;
       const { matrix, x, y, color } = this.currentPiece;
       const size = matrix.length;
 
@@ -417,9 +626,15 @@
         this.handleLineClears(fullRows);
       }
 
+      // Reset hold permission and lock state for new piece
+      this.canHold = true;
+      this.lockTimer = 0;
+      this.lockMoves = 0;
+
       // Spawn next piece
       this.currentPiece = this.nextPiece;
       this.nextPiece = this.pullNextPiece();
+      this.lowestY = this.currentPiece ? this.currentPiece.y : 0;
 
       // Check if newly spawned piece collides immediately -> Game Over
       if (!this.isValid(this.currentPiece.matrix, this.currentPiece.x, this.currentPiece.y)) {
@@ -445,6 +660,9 @@
       this.playSound('playScore');
       this.callbacks?.onScoreChange?.(this.score);
 
+      // Physical impulse on board spring
+      this.boardBounceVy = Math.min(220, this.boardBounceVy + 65 + count * 30);
+
       // Visual animations: flash effect, floating text, particles
       const textMap = { 1: '+100 SINGLE', 2: '+300 DOUBLE', 3: '+500 TRIPLE', 4: '+800 TETRIS!' };
       const clearText = `${textMap[count] || `+${pts}`} (LV.${this.level})`;
@@ -455,7 +673,7 @@
         x: this.boardX + this.boardWidth / 2,
         y: avgY,
         vy: -40,
-        color: count === 4 ? '#FF007F' : '#00FFFF',
+        color: count === 4 ? '#F2546D' : '#6EC6E6',
         alpha: 1.0,
         maxLife: 1.2,
         life: 1.2,
@@ -482,7 +700,7 @@
               y: py,
               vx: Math.cos(angle) * spd,
               vy: Math.sin(angle) * spd,
-              color: count === 4 ? '#FF007F' : '#00FFFF',
+              color: count === 4 ? '#F2546D' : '#6EC6E6',
               size: 2 + Math.random() * 3,
               alpha: 1.0,
               life: 0.5 + Math.random() * 0.4
@@ -534,8 +752,8 @@
               this.particles.push({
                 x: px,
                 y: py,
-                vx: (Math.random() - 0.5) * 120,
-                vy: -Math.random() * 80 - 20,
+                vx: (Math.random() - 0.5) * 140,
+                vy: -Math.random() * 90 - 20,
                 color: color,
                 size: 2 + Math.random() * 2.5,
                 alpha: 1.0,
@@ -548,50 +766,131 @@
     }
 
     // -------------------------------------------------------------
-    // Input Handlers
+    // Input Handlers (TETR.IO Snappy Controls)
     // -------------------------------------------------------------
     handleKeyDown(e) {
-      const code = e.code || e.key;
+      const code = e.code || '';
+      const key = e.key || '';
 
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(code) || e.key === ' ') {
+      // Prevent browser scrolling and shortcut collisions
+      const gameCodes = [
+        'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space',
+        'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyX', 'KeyZ', 'KeyC',
+        'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight'
+      ];
+      const gameKeys = [
+        ' ', 'Shift', 'Control', 'c', 'C', 'z', 'Z', 'x', 'X', 'a', 'A', 'w', 'W', 's', 'S'
+      ];
+
+      if (gameCodes.includes(code) || gameKeys.includes(key)) {
         e.preventDefault();
       }
 
       if (!this.running || this.gameOver) return;
 
-      if (code === 'ArrowLeft' || code === 'KeyA') {
-        if (!this.keyState.ArrowLeft) {
-          this.move(-1);
-          this.dasTimer = -this.dasDelay;
-        }
-        this.keyState.ArrowLeft = true;
-      } else if (code === 'ArrowRight' || code === 'KeyD') {
-        if (!this.keyState.ArrowRight) {
-          this.move(1);
-          this.dasTimer = -this.dasDelay;
-        }
-        this.keyState.ArrowRight = true;
-      } else if (code === 'ArrowUp' || code === 'KeyW') {
+      // 1. HOLD: C, Shift
+      if (code === 'KeyC' || code === 'ShiftLeft' || code === 'ShiftRight' || key === 'c' || key === 'C' || key === 'Shift') {
+        this.hold();
+        return;
+      }
+
+      // 2. HARD DROP: Space
+      if (code === 'Space' || code === 'Spacebar' || key === ' ') {
+        this.hardDrop();
+        return;
+      }
+
+      // 3. 180° ROTATION: KeyA
+      if (code === 'KeyA' || key === 'a' || key === 'A') {
+        this.rotate180();
+        return;
+      }
+
+      // 4. COUNTER-CLOCKWISE ROTATION: KeyZ, Control
+      if (code === 'KeyZ' || code === 'ControlLeft' || code === 'ControlRight' || key === 'z' || key === 'Z' || key === 'Control') {
+        this.rotateCounterClockwise();
+        return;
+      }
+
+      // 5. CLOCKWISE ROTATION: ArrowUp, KeyX, KeyW
+      if (code === 'ArrowUp' || code === 'KeyX' || code === 'KeyW' || key === 'ArrowUp' || key === 'x' || key === 'X' || key === 'w' || key === 'W') {
         this.rotateClockwise();
-      } else if (code === 'ArrowDown' || code === 'KeyS') {
+        return;
+      }
+
+      // 6. SOFT DROP: ArrowDown, KeyS
+      if (code === 'ArrowDown' || code === 'KeyS' || key === 'ArrowDown' || key === 's' || key === 'S') {
         if (!this.keyState.ArrowDown) {
           this.softDropStep();
           this.softDropTimer = 0;
         }
         this.keyState.ArrowDown = true;
-      } else if (code === 'Space' || code === 'Spacebar' || e.key === ' ') {
-        this.hardDrop();
+        return;
+      }
+
+      // 7. HORIZONTAL MOVEMENT: ArrowLeft (Instant zero dead-zone DAS reset)
+      if (code === 'ArrowLeft' || key === 'ArrowLeft') {
+        this.leftPressed = true;
+        this.keyState.ArrowLeft = true;
+        this.moveDir = -1;
+        this.move(-1);
+        this.dasTimer = 0;
+        this.arrTimer = 0;
+        return;
+      }
+
+      // 8. HORIZONTAL MOVEMENT: ArrowRight
+      if (code === 'ArrowRight' || key === 'ArrowRight') {
+        this.rightPressed = true;
+        this.keyState.ArrowRight = true;
+        this.moveDir = 1;
+        this.move(1);
+        this.dasTimer = 0;
+        this.arrTimer = 0;
+        return;
       }
     }
 
     handleKeyUp(e) {
-      const code = e.code || e.key;
-      if (code === 'ArrowLeft' || code === 'KeyA') {
-        this.keyState.ArrowLeft = false;
-      } else if (code === 'ArrowRight' || code === 'KeyD') {
-        this.keyState.ArrowRight = false;
-      } else if (code === 'ArrowDown' || code === 'KeyS') {
+      const code = e.code || '';
+      const key = e.key || '';
+
+      // Soft drop release
+      if (code === 'ArrowDown' || code === 'KeyS' || key === 'ArrowDown' || key === 's' || key === 'S') {
         this.keyState.ArrowDown = false;
+        this.softDropTimer = 0;
+      }
+
+      // ArrowLeft release: switch to right if right is still held
+      if (code === 'ArrowLeft' || key === 'ArrowLeft') {
+        this.leftPressed = false;
+        this.keyState.ArrowLeft = false;
+        if (this.rightPressed) {
+          this.moveDir = 1;
+          this.move(1);
+          this.dasTimer = 0;
+          this.arrTimer = 0;
+        } else {
+          this.moveDir = 0;
+          this.dasTimer = 0;
+          this.arrTimer = 0;
+        }
+      }
+
+      // ArrowRight release: switch to left if left is still held
+      if (code === 'ArrowRight' || key === 'ArrowRight') {
+        this.rightPressed = false;
+        this.keyState.ArrowRight = false;
+        if (this.leftPressed) {
+          this.moveDir = -1;
+          this.move(-1);
+          this.dasTimer = 0;
+          this.arrTimer = 0;
+        } else {
+          this.moveDir = 0;
+          this.dasTimer = 0;
+          this.arrTimer = 0;
+        }
       }
     }
 
@@ -606,6 +905,18 @@
       // Screen shake decay
       if (this.screenShake > 0) {
         this.screenShake = Math.max(0, this.screenShake - dt);
+      }
+
+      // Board Spring Physics (Damped Harmonic Oscillator)
+      const springK = 380;
+      const damping = 26;
+      const springAcc = -springK * this.boardBounceY - damping * this.boardBounceVy;
+      this.boardBounceVy += springAcc * dt;
+      this.boardBounceY += this.boardBounceVy * dt;
+
+      if (Math.abs(this.boardBounceY) < 0.05 && Math.abs(this.boardBounceVy) < 0.5) {
+        this.boardBounceY = 0;
+        this.boardBounceVy = 0;
       }
 
       // Update line clear visual flash
@@ -642,45 +953,62 @@
         }
       }
 
-      if (!this.running || this.gameOver) return;
+      if (!this.running || this.gameOver || !this.currentPiece) return;
 
-      // Handle continuous DAS (Delayed Auto Shift)
-      if (this.keyState.ArrowLeft && !this.keyState.ArrowRight) {
+      // 1. Continuous DAS / ARR Horizontal Shift
+      if (this.moveDir !== 0) {
         this.dasTimer += dt;
-        if (this.dasTimer >= this.dasInterval) {
-          this.move(-1);
-          this.dasTimer = 0;
+        if (this.dasTimer >= this.dasDelay) {
+          this.arrTimer += dt;
+          while (this.arrTimer >= this.dasInterval) {
+            this.move(this.moveDir);
+            this.arrTimer -= this.dasInterval;
+          }
         }
-      } else if (this.keyState.ArrowRight && !this.keyState.ArrowLeft) {
-        this.dasTimer += dt;
-        if (this.dasTimer >= this.dasInterval) {
-          this.move(1);
-          this.dasTimer = 0;
-        }
+      } else {
+        this.dasTimer = 0;
+        this.arrTimer = 0;
       }
 
-      // Handle continuous soft drop
+      // 2. Continuous Soft Drop (Fast TETR.IO SDF)
       if (this.keyState.ArrowDown) {
         this.softDropTimer += dt;
-        if (this.softDropTimer >= this.softDropInterval) {
+        while (this.softDropTimer >= this.softDropInterval) {
           this.softDropStep();
-          this.softDropTimer = 0;
+          this.softDropTimer -= this.softDropInterval;
         }
       }
 
-      // Normal gravity drop speed
+      // 3. Grounded Check & Lock Delay (0.5s)
+      const grounded = this.isGrounded();
+      if (grounded) {
+        this.lockTimer += dt;
+        if (this.lockTimer >= this.lockDelay) {
+          this.lockPiece();
+          return;
+        }
+      } else {
+        // In air: clear lockTimer so piece has full lock window when it touches down
+        if (this.lockTimer > 0) {
+          this.lockTimer = 0;
+        }
+      }
+
+      // 4. Gravity Drop Speed
       // Math.max(0.08, 0.8 - (level - 1) * 0.065) seconds
       const dropSpeed = Math.max(0.08, 0.8 - (this.level - 1) * 0.065);
       this.dropTimer += dt;
       if (this.dropTimer >= dropSpeed) {
         this.dropTimer = 0;
-        if (this.currentPiece) {
-          if (this.isValid(this.currentPiece.matrix, this.currentPiece.x, this.currentPiece.y + 1)) {
-            this.currentPiece.y += 1;
-          } else {
-            this.lockPiece();
+        if (this.isValid(this.currentPiece.matrix, this.currentPiece.x, this.currentPiece.y + 1)) {
+          this.currentPiece.y += 1;
+          if (this.currentPiece.y > this.lowestY) {
+            this.lowestY = this.currentPiece.y;
+            this.lockMoves = 0;
+            this.lockTimer = 0;
           }
         }
+        // If grounded on gravity drop, do NOT instantly lock! Handled smoothly by lockTimer.
       }
     }
 
@@ -701,32 +1029,38 @@
       }
 
       // 1. Clear background
-      ctx.fillStyle = '#080a14';
+      ctx.fillStyle = '#18243E';
       ctx.fillRect(0, 0, this.width, this.height);
 
       // Subtle cyber background grid
       this.renderBackgroundGrid(ctx);
 
-      // 2. Render Left 10x20 Board
+      // 2. Render Board & Playfield with Physical Board Spring Reaction
+      ctx.save();
+      ctx.translate(0, this.boardBounceY);
+
+      // 2a. Board background, grid, and locked blocks
       this.renderBoard(ctx);
 
-      // 3. Render Ghost Piece
+      // 2b. Ghost Piece
       this.renderGhostPiece(ctx);
 
-      // 4. Render Active Tetromino
+      // 2c. Active Tetromino + Lock Delay Bar
       this.renderCurrentPiece(ctx);
 
-      // 5. Render Line Clear Flash
+      // 2d. Line clear flash ribbons
       this.renderLineClearEffects(ctx);
 
-      // 6. Render Right HUD Panel
+      ctx.restore();
+
+      // 3. Render Right HUD Panel (SCORE, LEVEL/LINES, HOLD, NEXT, CONTROLS)
       this.renderHUD(ctx);
 
-      // 7. Render Particles & Floating Texts
+      // 4. Particles & Floating Texts
       this.renderParticles(ctx);
       this.renderFloatingTexts(ctx);
 
-      // 8. Render Game Over overlay if triggered
+      // 5. Render Game Over overlay if triggered
       if (this.gameOver) {
         this.renderGameOver(ctx);
       }
@@ -739,7 +1073,7 @@
     // -------------------------------------------------------------
     renderBackgroundGrid(ctx) {
       ctx.save();
-      ctx.strokeStyle = '#10162a';
+      ctx.strokeStyle = '#2A3E66';
       ctx.lineWidth = 1;
       const step = 25;
       for (let x = 0; x < this.width; x += step) {
@@ -760,12 +1094,12 @@
     renderBoard(ctx) {
       ctx.save();
 
-      // Board Background
-      ctx.fillStyle = '#060812';
+      // Board Background (Soft Slate-Navy)
+      ctx.fillStyle = '#16223A';
       ctx.fillRect(this.boardX, this.boardY, this.boardWidth, this.boardHeight);
 
       // Subtle interior grid
-      ctx.strokeStyle = '#12192e';
+      ctx.strokeStyle = '#2A3E66';
       ctx.lineWidth = 1;
       for (let c = 1; c < this.cols; c++) {
         const x = this.boardX + c * this.cellSize;
@@ -789,26 +1123,25 @@
           if (color) {
             const px = this.boardX + c * this.cellSize;
             const py = this.boardY + r * this.cellSize;
-            this.drawBlockCell(ctx, px, py, color, false);
+            this.drawBlockCell(ctx, px, py, color, false, false, 0);
           }
         }
       }
 
-      // Outer Glowing Cyan Neon Border
-      const glow = 8 + Math.sin(this.ambientGlowTimer * 3) * 3;
-      ctx.shadowColor = '#00FFFF';
-      ctx.shadowBlur = glow;
-      ctx.strokeStyle = '#00FFFF';
+      // Outer Pastel Border with minimal shadowBlur
+      ctx.shadowColor = '#6EC6E6';
+      ctx.shadowBlur = 3;
+      ctx.strokeStyle = '#5B78AD';
       ctx.lineWidth = 2.5;
       ctx.strokeRect(this.boardX - 2, this.boardY - 2, this.boardWidth + 4, this.boardHeight + 4);
 
-      // Cyber Corner Brackets
-      this.drawCornerBrackets(ctx, this.boardX - 6, this.boardY - 6, this.boardWidth + 12, this.boardHeight + 12, '#00FFFF');
+      // Cyber Corner Brackets in Sky-Blue
+      this.drawCornerBrackets(ctx, this.boardX - 6, this.boardY - 6, this.boardWidth + 12, this.boardHeight + 12, '#6EC6E6');
 
       ctx.restore();
     }
 
-    drawBlockCell(ctx, px, py, color, isGhost = false) {
+    drawBlockCell(ctx, px, py, color, isGhost = false, isGrounded = false, lockProgress = 0) {
       const size = this.cellSize;
       const pad = 1.5;
       const w = size - pad * 2;
@@ -819,26 +1152,26 @@
       ctx.save();
 
       if (isGhost) {
-        // Semi-transparent dashed outline with neon glow
+        // Semi-transparent dashed outline with subtle pastel glow
         ctx.shadowColor = color;
-        ctx.shadowBlur = 6;
+        ctx.shadowBlur = 2;
         ctx.setLineDash([4, 4]);
         ctx.strokeStyle = color;
-        ctx.lineWidth = 1.8;
-        ctx.fillStyle = hexToRgba(color, 0.12);
+        ctx.lineWidth = 1.5;
+        ctx.fillStyle = hexToRgba(color, 0.15);
         ctx.fillRect(x, y, w, h);
         ctx.strokeRect(x, y, w, h);
       } else {
-        // Vibrant neon block with beveled highlight & core glow
+        // Crisp pastel pixel-art block with beveled highlight & core glow
         ctx.shadowColor = color;
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 2;
 
         // Base fill
         ctx.fillStyle = color;
         ctx.fillRect(x, y, w, h);
 
         // Top/Left highlight bevel
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(x + w, y);
@@ -850,7 +1183,7 @@
         ctx.fill();
 
         // Bottom/Right dark bevel
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.beginPath();
         ctx.moveTo(x + w, y);
         ctx.lineTo(x + w, y + h);
@@ -862,8 +1195,16 @@
         ctx.fill();
 
         // Inner glowing core
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
         ctx.fillRect(x + 7, y + 7, w - 14, h - 14);
+
+        // Grounded Lock Delay Pulse & Warning Shimmer
+        if (isGrounded) {
+          const pulse = Math.sin(this.ambientGlowTimer * 16) * 0.15;
+          const shimmer = Math.min(0.65, 0.18 + lockProgress * 0.42 + pulse);
+          ctx.fillStyle = `rgba(255, 255, 255, ${shimmer})`;
+          ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
+        }
       }
 
       ctx.restore();
@@ -883,7 +1224,7 @@
             if (by >= 0 && by < this.rows) {
               const px = this.boardX + bx * this.cellSize;
               const py = this.boardY + by * this.cellSize;
-              this.drawBlockCell(ctx, px, py, color, true);
+              this.drawBlockCell(ctx, px, py, color, true, false, 0);
             }
           }
         }
@@ -895,6 +1236,13 @@
       const { matrix, x, y, color } = this.currentPiece;
       const size = matrix.length;
 
+      const grounded = this.isGrounded();
+      const lockProgress = grounded ? Math.min(1, this.lockTimer / this.lockDelay) : 0;
+
+      let minBx = Infinity;
+      let maxBx = -Infinity;
+      let maxBy = -Infinity;
+
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
           if (matrix[r][c]) {
@@ -903,20 +1251,65 @@
             if (by >= 0 && by < this.rows) {
               const px = this.boardX + bx * this.cellSize;
               const py = this.boardY + by * this.cellSize;
-              this.drawBlockCell(ctx, px, py, color, false);
+              this.drawBlockCell(ctx, px, py, color, false, grounded, lockProgress);
+
+              if (bx < minBx) minBx = bx;
+              if (bx > maxBx) maxBx = bx;
+              if (by > maxBy) maxBy = by;
             }
           }
         }
       }
+
+      // Render TETR.IO style lock delay gauge below the piece when grounded
+      if (grounded && maxBy >= 0 && minBx <= maxBx) {
+        this.renderLockDelayBar(ctx, minBx, maxBx, maxBy, lockProgress);
+      }
+    }
+
+    renderLockDelayBar(ctx, minBx, maxBx, maxBy, lockProgress) {
+      ctx.save();
+      const barW = (maxBx - minBx + 1) * this.cellSize;
+      const barH = 3;
+      const barX = this.boardX + minBx * this.cellSize;
+      let barY = this.boardY + (maxBy + 1) * this.cellSize + 1;
+
+      // Keep within board bottom
+      if (barY + barH > this.boardY + this.boardHeight) {
+        barY = this.boardY + this.boardHeight - barH - 1;
+      }
+
+      // Gauge background track
+      ctx.fillStyle = 'rgba(22, 34, 58, 0.95)';
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeStyle = '#5B78AD';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(barX, barY, barW, barH);
+
+      // Remaining lock window width
+      const remProgress = Math.max(0, 1 - lockProgress);
+      let barColor = '#6EC6E6';
+      if (lockProgress > 0.75) {
+        barColor = '#F2546D'; // Danger Patch Rose Red
+      } else if (lockProgress > 0.45) {
+        barColor = '#F4C552'; // Warning Mustard Gold
+      }
+
+      ctx.fillStyle = barColor;
+      ctx.shadowColor = barColor;
+      ctx.shadowBlur = 2;
+      ctx.fillRect(barX, barY, barW * remProgress, barH);
+
+      ctx.restore();
     }
 
     renderLineClearEffects(ctx) {
       ctx.save();
       for (const eff of this.lineClearEffects) {
         const y = this.boardY + eff.row * this.cellSize;
-        ctx.fillStyle = `rgba(255, 255, 255, ${eff.alpha * 0.85})`;
-        ctx.shadowColor = '#00FFFF';
-        ctx.shadowBlur = 16;
+        ctx.fillStyle = `rgba(255, 255, 255, ${eff.alpha * 0.8})`;
+        ctx.shadowColor = '#6EC6E6';
+        ctx.shadowBlur = 4;
         ctx.fillRect(this.boardX, y, this.boardWidth, this.cellSize);
       }
       ctx.restore();
@@ -930,107 +1323,141 @@
       const x = this.hudX;
       let y = this.hudY;
 
-      // 1. SCORE Box
-      this.drawHUDCard(ctx, x, y, this.hudWidth, 75, 'SCORE');
+      // 1. SCORE Box (h = 56)
+      this.drawHUDCard(ctx, x, y, this.hudWidth, 56, 'SCORE');
       const scoreStr = String(this.score).padStart(6, '0');
-      ctx.font = '16px "Press Start 2P", monospace';
-      ctx.fillStyle = '#FFD700';
-      ctx.shadowColor = '#FFD700';
-      ctx.shadowBlur = 8;
+      ctx.font = '15px "Press Start 2P", monospace';
+      ctx.fillStyle = '#F4C552';
+      ctx.shadowColor = '#F4C552';
+      ctx.shadowBlur = 2;
       ctx.textAlign = 'center';
-      ctx.fillText(scoreStr, x + this.hudWidth / 2, y + 52);
+      ctx.fillText(scoreStr, x + this.hudWidth / 2, y + 40);
       ctx.shadowBlur = 0;
 
-      // 2. LEVEL & LINES Box
-      y += 88;
-      this.drawHUDCard(ctx, x, y, this.hudWidth, 75, 'LEVEL / LINES');
-      ctx.font = '12px "Press Start 2P", monospace';
+      // 2. LEVEL & LINES Box (h = 58)
+      y += 63;
+      this.drawHUDCard(ctx, x, y, this.hudWidth, 58, 'LEVEL / LINES');
+      ctx.font = '10px "Press Start 2P", monospace';
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#00FFFF';
-      ctx.fillText(`LV: ${String(this.level).padStart(2, '0')}`, x + 16, y + 42);
-      ctx.fillStyle = '#39FF14';
-      ctx.fillText(`LN: ${String(this.linesCleared).padStart(3, '0')}`, x + 16, y + 62);
+      ctx.fillStyle = '#6EC6E6';
+      ctx.fillText(`LV: ${String(this.level).padStart(2, '0')}`, x + 14, y + 36);
+      ctx.fillStyle = '#7BE092';
+      ctx.fillText(`LN: ${String(this.linesCleared).padStart(3, '0')}`, x + 14, y + 50);
 
-      // 3. NEXT Tetromino Preview Box
-      y += 88;
-      this.drawHUDCard(ctx, x, y, this.hudWidth, 130, 'NEXT');
-      this.renderNextPiecePreview(ctx, x, y + 25, this.hudWidth, 100);
+      // 3. HOLD Box (h = 88)
+      y += 65;
+      const holdDimmed = !this.canHold;
+      const holdLabel = holdDimmed ? 'HOLD [LOCK]' : 'HOLD';
+      this.drawHUDCard(ctx, x, y, this.hudWidth, 88, holdLabel, holdDimmed);
+      this.renderPiecePreview(ctx, this.holdPiece, x, y + 20, this.hudWidth, 68, holdDimmed);
 
-      // 4. CONTROLS GUIDE Box
-      y += 143;
-      this.drawHUDCard(ctx, x, y, this.hudWidth, 230, 'CONTROLS');
-      ctx.font = '8px "Press Start 2P", monospace';
-      ctx.textAlign = 'left';
-      ctx.fillStyle = '#E2E8F0';
+      // 4. NEXT Tetromino Preview Box (h = 88)
+      y += 95;
+      this.drawHUDCard(ctx, x, y, this.hudWidth, 88, 'NEXT');
+      this.renderPiecePreview(ctx, this.nextPiece?.key, x, y + 20, this.hudWidth, 68, false);
+
+      // 5. CONTROLS GUIDE Box (h = 295)
+      y += 95;
+      this.drawHUDCard(ctx, x, y, this.hudWidth, 295, 'CONTROLS');
+      ctx.font = '7px "Press Start 2P", monospace';
 
       const hints = [
-        { key: '▲', label: 'ROTATE' },
         { key: '◄ ►', label: 'MOVE' },
+        { key: '▲/X/W', label: 'ROT CW' },
+        { key: 'Z/CTRL', label: 'ROT CCW' },
+        { key: 'A', label: '180° ROT' },
+        { key: 'C/SHIFT', label: 'HOLD' },
         { key: '▼', label: 'SOFT DROP' },
         { key: 'SPACE', label: 'HARD DROP' }
       ];
 
-      let hintY = y + 40;
+      let hintY = y + 38;
       for (const h of hints) {
         // Keycap badge
-        ctx.fillStyle = '#1B2236';
-        ctx.fillRect(x + 14, hintY - 12, 60, 16);
-        ctx.strokeStyle = '#00FFFF';
+        ctx.fillStyle = '#18243E';
+        ctx.fillRect(x + 10, hintY - 11, 68, 17);
+        ctx.strokeStyle = '#5B78AD';
         ctx.lineWidth = 1;
-        ctx.strokeRect(x + 14, hintY - 12, 60, 16);
+        ctx.strokeRect(x + 10, hintY - 11, 68, 17);
 
-        ctx.fillStyle = '#00FFFF';
+        ctx.font = '7px "Press Start 2P", monospace';
+        ctx.fillStyle = '#6EC6E6';
         ctx.textAlign = 'center';
-        ctx.fillText(h.key, x + 44, hintY);
+        ctx.fillText(h.key, x + 44, hintY + 1);
 
-        ctx.fillStyle = '#94A3B8';
+        ctx.fillStyle = '#F8FAFC';
         ctx.textAlign = 'left';
-        ctx.fillText(h.label, x + 82, hintY);
+        ctx.font = '7px "Press Start 2P", monospace';
+        ctx.fillText(h.label, x + 84, hintY + 1);
 
-        hintY += 32;
+        hintY += 26;
       }
 
-      // Sub-hint
-      ctx.fillStyle = '#39FF14';
+      // Sub-hint badge
+      ctx.fillStyle = '#7BE092';
       ctx.font = '7px "Press Start 2P", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('SPEED RUSH LV.10+', x + this.hudWidth / 2, hintY + 14);
+      ctx.fillText('TETR.IO SRS READY', x + this.hudWidth / 2, y + 248);
+      ctx.fillStyle = '#F2546D';
+      ctx.fillText('SPEED RUSH LV.10+', x + this.hudWidth / 2, y + 268);
 
       ctx.restore();
     }
 
-    drawHUDCard(ctx, x, y, w, h, label) {
-      // Dark translucent background
-      ctx.fillStyle = '#0B0F1E';
+    drawHUDCard(ctx, x, y, w, h, label, isDimmed = false) {
+      ctx.save();
+      if (isDimmed) {
+        ctx.globalAlpha = 0.65;
+      }
+
+      // Slate-Navy card background
+      ctx.fillStyle = '#233457';
       ctx.fillRect(x, y, w, h);
 
-      // Border with subtle magenta/cyan glow
-      ctx.strokeStyle = '#22304F';
+      // Border
+      ctx.strokeStyle = isDimmed ? '#2A3E66' : '#5B78AD';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(x, y, w, h);
 
       // Top title bar
-      ctx.fillStyle = '#141C32';
+      ctx.fillStyle = isDimmed ? '#1E2D4D' : '#324875';
       ctx.fillRect(x, y, w, 20);
 
       ctx.font = '8px "Press Start 2P", monospace';
-      ctx.fillStyle = '#00FFFF';
-      ctx.shadowColor = '#00FFFF';
-      ctx.shadowBlur = 4;
+      ctx.fillStyle = isDimmed ? '#64748B' : '#6EC6E6';
+      if (!isDimmed) {
+        ctx.shadowColor = '#6EC6E6';
+        ctx.shadowBlur = 2;
+      }
       ctx.textAlign = 'left';
-      ctx.fillText(label, x + 10, y + 14);
+      ctx.fillText(label, x + 8, y + 14);
       ctx.shadowBlur = 0;
 
-      // Small accent dot
-      ctx.fillStyle = '#FF007F';
-      ctx.fillRect(x + w - 12, y + 6, 6, 6);
+      // Small accent dot in Patch Rose Red
+      ctx.fillStyle = isDimmed ? '#475569' : '#F2546D';
+      ctx.fillRect(x + w - 12, y + 7, 6, 6);
+
+      ctx.restore();
     }
 
-    renderNextPiecePreview(ctx, boxX, boxY, boxW, boxH) {
-      if (!this.nextPiece) return;
-      const { matrix, color } = this.nextPiece;
+    renderPiecePreview(ctx, pieceKey, boxX, boxY, boxW, boxH, isDimmed = false) {
+      if (!pieceKey) {
+        ctx.save();
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.fillStyle = '#64748B';
+        ctx.textAlign = 'center';
+        ctx.fillText('-- EMPTY --', boxX + boxW / 2, boxY + boxH / 2 + 3);
+        ctx.restore();
+        return;
+      }
+
+      const def = TETROMINOES[pieceKey];
+      if (!def) return;
+
+      const matrix = def.matrix;
+      const color = def.color;
       const size = matrix.length;
-      const pCellSize = 22; // preview cell size
+      const pCellSize = 16;
 
       // Calculate bounding box of active piece cells
       let minR = size, maxR = -1, minC = size, maxC = -1;
@@ -1050,24 +1477,30 @@
       const startX = boxX + (boxW - pW) / 2 - minC * pCellSize;
       const startY = boxY + (boxH - pH) / 2 - minR * pCellSize;
 
+      ctx.save();
+      if (isDimmed) {
+        ctx.globalAlpha = 0.35;
+      }
+
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
           if (matrix[r][c]) {
             const px = startX + c * pCellSize;
             const py = startY + r * pCellSize;
 
-            ctx.save();
             ctx.shadowColor = color;
-            ctx.shadowBlur = 6;
+            ctx.shadowBlur = 2;
             ctx.fillStyle = color;
             ctx.fillRect(px + 1, py + 1, pCellSize - 2, pCellSize - 2);
 
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.fillRect(px + 3, py + 3, pCellSize - 6, 3);
-            ctx.restore();
+            // Subtle highlight bevel
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.fillRect(px + 2, py + 2, pCellSize - 4, 3);
           }
         }
       }
+
+      ctx.restore();
     }
 
     drawCornerBrackets(ctx, x, y, w, h, color) {
@@ -1115,7 +1548,7 @@
       for (const p of this.particles) {
         ctx.fillStyle = hexToRgba(p.color, p.alpha);
         ctx.shadowColor = p.color;
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = 2;
         ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
       }
       ctx.restore();
@@ -1128,7 +1561,7 @@
         ctx.font = `${ft.size}px "Press Start 2P", monospace`;
         ctx.fillStyle = hexToRgba(ft.color, ft.alpha);
         ctx.shadowColor = ft.color;
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 3;
         ctx.fillText(ft.text, ft.x, ft.y);
       }
       ctx.restore();
@@ -1136,33 +1569,34 @@
 
     renderGameOver(ctx) {
       ctx.save();
-      // Dark translucent overlay over board
-      ctx.fillStyle = 'rgba(5, 7, 15, 0.85)';
+      // Soft Slate-Navy translucent overlay over board
+      ctx.fillStyle = 'rgba(22, 34, 58, 0.92)';
       ctx.fillRect(this.boardX, this.boardY, this.boardWidth, this.boardHeight);
 
-      // Neon warning box in center of board
+      // Warning box in center of board
       const cx = this.boardX + this.boardWidth / 2;
       const cy = this.boardY + this.boardHeight / 2;
 
       ctx.font = '20px "Press Start 2P", monospace';
-      ctx.fillStyle = '#FF0055';
-      ctx.shadowColor = '#FF0055';
-      ctx.shadowBlur = 12;
+      ctx.fillStyle = '#F2546D';
+      ctx.shadowColor = '#F2546D';
+      ctx.shadowBlur = 4;
       ctx.textAlign = 'center';
       ctx.fillText('SYSTEM LOCK', cx, cy - 40);
 
       ctx.font = '12px "Press Start 2P", monospace';
-      ctx.fillStyle = '#00FFFF';
-      ctx.shadowColor = '#00FFFF';
-      ctx.shadowBlur = 6;
+      ctx.fillStyle = '#6EC6E6';
+      ctx.shadowColor = '#6EC6E6';
+      ctx.shadowBlur = 2;
       ctx.fillText('GAME OVER', cx, cy);
 
       ctx.font = '9px "Press Start 2P", monospace';
-      ctx.fillStyle = '#FFD700';
+      ctx.fillStyle = '#F4C552';
       ctx.fillText(`SCORE: ${this.score}`, cx, cy + 35);
+      ctx.fillStyle = '#F8FAFC';
       ctx.fillText(`LINES: ${this.linesCleared}`, cx, cy + 55);
 
-      ctx.fillStyle = '#39FF14';
+      ctx.fillStyle = '#7BE092';
       ctx.fillText('ENTER INITIALS ON RIGHT', cx, cy + 95);
 
       ctx.restore();

@@ -15,13 +15,13 @@
  *   - Neon ship polygon pointing in movement direction + glowing engine particles
  *   - Bullet-hell style precise hitbox indicator (radius 6px)
  * - 3 Bullet Types spawning from all 4 screen edges:
- *   1. Normal Bullet (#00FFFF Cyan): straight line at steady speed
- *   2. Aimed Bullet (#FF007F Magenta): aims at player on spawn, diamond/spear, faster
- *   3. Accelerating Bullet (#FF8800/#FF2200 Orange-Red): starts at 80px/s,
+ *   1. Normal Bullet (#6EC6E6 Pastel Sky-Blue): straight line at steady speed
+ *   2. Aimed Bullet (#F2546D Pastel Rose-Red): aims at player on spawn, diamond/spear, faster
+ *   3. Accelerating Bullet (#F4A261 Mustard-Apricot): starts at 80px/s,
  *      accelerates at 260px/s² with fiery trail
  * - Scoring & Energy Cores:
  *   - Survival score increases continuously (150 pts/sec)
- *   - Green glowing hexagonal Energy Core (#39FF14) spawns every 4~6s with pulsing ring
+ *   - Mint glowing hexagonal Energy Core (#7BE092) spawns every 4~6s with pulsing ring
  *   - Collecting awards +1500 bonus points (sound.playPowerUp()), triggers 130px radius
  *     EMP shockwave clearing nearby bullets, and shows floating "+1500!" text
  *   - Spawn interval shortens from 0.42s down to 0.08s; bullet speeds scale up
@@ -139,14 +139,15 @@
     // -------------------------------------------------------------
     initStars() {
       this.stars = [];
+      const starColors = ['#6EC6E6', '#F2546D', '#7BE092', '#F4C552', '#F8FAFC'];
       for (let i = 0; i < 45; i++) {
         this.stars.push({
           x: Math.random() * this.width,
           y: 54 + Math.random() * (this.height - 54),
           speed: 25 + Math.random() * 85,
           size: 1 + Math.random() * 2,
-          color: Math.random() > 0.4 ? '#00FFFF' : (Math.random() > 0.5 ? '#FF007F' : '#39FF14'),
-          alpha: 0.2 + Math.random() * 0.7
+          color: starColors[Math.floor(Math.random() * starColors.length)],
+          alpha: 0.25 + Math.random() * 0.65
         });
       }
     }
@@ -264,7 +265,7 @@
 
       // 3. Configure bullet parameters
       if (type === 'normal') {
-        // Cyan (#00FFFF): Moves in straight line at steady speed
+        // Pastel Sky-Blue (#6EC6E6): Moves in straight line at steady speed
         // Directed toward a random point inside the arena center
         const targetX = 160 + Math.random() * 280;
         const targetY = 220 + Math.random() * 380;
@@ -280,11 +281,11 @@
           speed: speed,
           angle: angle,
           radius: 5,
-          color: '#00FFFF',
+          color: '#6EC6E6',
           life: 0
         });
       } else if (type === 'aimed') {
-        // Magenta (#FF007F): Calculates angle toward player's current position upon spawn
+        // Pastel Rose-Red (#F2546D): Calculates angle toward player's current position upon spawn
         // Diamond/spear shape, faster speed
         const angle = Math.atan2(this.player.y - spawnY, this.player.x - spawnX);
         const speed = 270 * speedMult;
@@ -298,11 +299,11 @@
           speed: speed,
           angle: angle,
           radius: 5.5,
-          color: '#FF007F',
+          color: '#F2546D',
           life: 0
         });
       } else {
-        // Accelerating Bullet (#FF8800 / #FF2200):
+        // Accelerating Bullet (#F4A261 Mustard-Apricot):
         // Starts slow (80px/s) and accelerates continuously (accel = 260px/s²) with fiery trail
         const targetAngle = Math.atan2(this.player.y - spawnY, this.player.x - spawnX);
         // Slight spread deviation (+/- 0.25 rad) for challenging patterns
@@ -319,7 +320,7 @@
           accel: 260,
           angle: angle,
           radius: 6,
-          color: '#FF8800',
+          color: '#F4A261',
           life: 0,
           trailTimer: 0
         });
@@ -375,7 +376,7 @@
               y: b.y,
               vx: Math.cos(angle) * spd,
               vy: Math.sin(angle) * spd,
-              color: '#39FF14',
+              color: '#7BE092',
               size: 2 + Math.random() * 2,
               alpha: 1.0,
               life: 0.35 + Math.random() * 0.2
@@ -394,7 +395,7 @@
           x: originX,
           y: originY + 28,
           vy: -35,
-          color: '#00FFFF',
+          color: '#6EC6E6',
           alpha: 1.0,
           maxLife: 1.0,
           life: 1.0,
@@ -414,11 +415,11 @@
       this.playSound('playGameOver');
       this.screenShake = 0.35;
 
-      // Spawn massive explosion particles at player position
+      // Spawn pastel explosion particles at player position
       for (let i = 0; i < 50; i++) {
         const angle = Math.random() * Math.PI * 2;
         const spd = 60 + Math.random() * 240;
-        const colors = ['#00FFFF', '#FF007F', '#39FF14', '#FF8800', '#FFFFFF'];
+        const colors = ['#6EC6E6', '#F2546D', '#7BE092', '#F4C552', '#F8FAFC'];
         this.particles.push({
           x: this.player.x,
           y: this.player.y,
@@ -545,7 +546,7 @@
             y: this.player.y - Math.sin(this.player.angle) * 11,
             vx: Math.cos(rearAngle) * thrustSpd,
             vy: Math.sin(rearAngle) * thrustSpd,
-            color: Math.random() > 0.5 ? '#00FFFF' : '#39FF14',
+            color: Math.random() > 0.5 ? '#6EC6E6' : '#F4C552',
             size: 2 + Math.random() * 2,
             alpha: 1.0,
             life: 0.22 + Math.random() * 0.15
@@ -587,7 +588,7 @@
             x: core.x,
             y: core.y - 12,
             vy: -45,
-            color: '#39FF14',
+            color: '#7BE092',
             alpha: 1.0,
             maxLife: 1.2,
             life: 1.2,
@@ -636,7 +637,7 @@
               y: b.y,
               vx: (Math.random() - 0.5) * 30,
               vy: (Math.random() - 0.5) * 30,
-              color: Math.random() > 0.4 ? '#FF8800' : '#FF2200',
+              color: Math.random() > 0.4 ? '#F4A261' : '#F2546D',
               size: 2 + Math.random() * 2,
               alpha: 0.9,
               life: 0.25 + Math.random() * 0.15
@@ -677,8 +678,8 @@
         ctx.translate(sx, sy);
       }
 
-      // 1. Deep Cyber Background
-      ctx.fillStyle = '#060814';
+      // 1. Soft Slate-Navy Background
+      ctx.fillStyle = '#18243E';
       ctx.fillRect(0, 0, this.width, this.height);
 
       // 2. Background Grid Lines & Stars
@@ -719,7 +720,7 @@
     // -------------------------------------------------------------
     renderArenaGrid(ctx) {
       ctx.save();
-      ctx.strokeStyle = '#0e1628';
+      ctx.strokeStyle = '#25375C';
       ctx.lineWidth = 1;
 
       const step = 35;
@@ -736,13 +737,13 @@
         ctx.stroke();
       }
 
-      // Glowing Cyan Arena Boundaries
-      ctx.strokeStyle = 'rgba(0, 255, 255, 0.25)';
+      // Pastel Sky-Blue Arena Boundaries
+      ctx.strokeStyle = '#5B78AD';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(12, 58, this.width - 24, this.height - 70);
 
-      // Cyber Corner Brackets
-      this.drawCornerBrackets(ctx, 12, 58, this.width - 24, this.height - 70, '#00FFFF');
+      // Pastel Corner Brackets
+      this.drawCornerBrackets(ctx, 12, 58, this.width - 24, this.height - 70, '#6EC6E6');
 
       ctx.restore();
     }
@@ -794,18 +795,18 @@
     }
 
     // -------------------------------------------------------------
-    // Player Ship Rendering
+    // Player Ship Rendering (Glove White & Sky-Blue with Patch Accents)
     // -------------------------------------------------------------
     renderPlayer(ctx) {
       ctx.save();
       ctx.translate(this.player.x, this.player.y);
       ctx.rotate(this.player.angle);
 
-      // Delta Wing Neon Ship Polygon
-      ctx.shadowColor = '#00FFFF';
-      ctx.shadowBlur = 10;
+      // Clean, crisp pixel-art ship
+      ctx.shadowColor = '#6EC6E6';
+      ctx.shadowBlur = 2;
 
-      // Outer hull
+      // Outer hull in Slate-Navy
       ctx.beginPath();
       ctx.moveTo(16, 0);          // Nose
       ctx.lineTo(-12, -12);       // Left wingtip
@@ -815,28 +816,37 @@
       ctx.lineTo(-12, 12);        // Right wingtip
       ctx.closePath();
 
-      ctx.fillStyle = '#0B132B';
+      ctx.fillStyle = '#1E2D4D';
       ctx.fill();
 
-      ctx.strokeStyle = '#00FFFF';
+      ctx.strokeStyle = '#6EC6E6';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Cockpit Glow
-      ctx.fillStyle = '#FFFFFF';
+      // Wingtip accents in Patch Rose-Crimson (#F2546D)
+      ctx.fillStyle = '#F2546D';
+      ctx.fillRect(-12, -12, 3, 3);
+      ctx.fillRect(-12, 9, 3, 3);
+
+      // Engine exhaust accent in Mustard-Gold (#F4C552)
+      ctx.fillStyle = '#F4C552';
+      ctx.fillRect(-9, -2, 3, 4);
+
+      // Cockpit in crisp Glove White (#F8FAFC)
+      ctx.fillStyle = '#F8FAFC';
       ctx.beginPath();
       ctx.ellipse(2, 0, 5, 2.5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Bullet-hell Center Hitbox Indicator (radius 6px)
-      ctx.shadowColor = '#39FF14';
-      ctx.shadowBlur = 8;
-      ctx.fillStyle = '#39FF14';
+      // Precise Bullet-Hell Center Hitbox Indicator (radius 6px) in Rose-Crimson & Glove White
+      ctx.shadowColor = '#F2546D';
+      ctx.shadowBlur = 2;
+      ctx.fillStyle = '#F2546D';
       ctx.beginPath();
       ctx.arc(0, 0, this.player.hitboxRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = '#F8FAFC';
       ctx.beginPath();
       ctx.arc(0, 0, 2, 0, Math.PI * 2);
       ctx.fill();
@@ -845,7 +855,7 @@
     }
 
     // -------------------------------------------------------------
-    // Bullets Rendering (3 Distinct Visual Styles)
+    // Bullets Rendering (Pastel Pixel-Art Clean Styles)
     // -------------------------------------------------------------
     renderBullets(ctx) {
       ctx.save();
@@ -854,35 +864,35 @@
         ctx.save();
 
         if (b.type === 'normal') {
-          // Normal Bullet: Glowing Cyan (#00FFFF) Plasma Sphere
-          ctx.shadowColor = '#00FFFF';
-          ctx.shadowBlur = 8;
+          // Normal Bullet: Pastel Sky-Blue (#6EC6E6) Sphere
+          ctx.shadowColor = '#6EC6E6';
+          ctx.shadowBlur = 2;
 
-          // Outer pulse
-          ctx.fillStyle = 'rgba(0, 255, 255, 0.4)';
+          // Outer ring
+          ctx.fillStyle = 'rgba(110, 198, 230, 0.35)';
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 2, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius + 1.5, 0, Math.PI * 2);
           ctx.fill();
 
           // Main body
-          ctx.fillStyle = '#00FFFF';
+          ctx.fillStyle = '#6EC6E6';
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
           ctx.fill();
 
-          // White core
-          ctx.fillStyle = '#FFFFFF';
+          // Glove White core
+          ctx.fillStyle = '#F8FAFC';
           ctx.beginPath();
           ctx.arc(b.x, b.y, 2, 0, Math.PI * 2);
           ctx.fill();
 
         } else if (b.type === 'aimed') {
-          // Aimed Bullet: Magenta (#FF007F) Diamond / Spear
+          // Aimed Bullet: Pastel Rose-Red (#F2546D) Spear
           ctx.translate(b.x, b.y);
           ctx.rotate(b.angle);
 
-          ctx.shadowColor = '#FF007F';
-          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#F2546D';
+          ctx.shadowBlur = 2;
 
           // Elongated diamond/spear
           ctx.beginPath();
@@ -892,32 +902,32 @@
           ctx.lineTo(-4, 5);   // Bottom barb
           ctx.closePath();
 
-          ctx.fillStyle = '#FF007F';
+          ctx.fillStyle = '#F2546D';
           ctx.fill();
 
-          ctx.strokeStyle = '#FFFFFF';
+          ctx.strokeStyle = '#F8FAFC';
           ctx.lineWidth = 1;
           ctx.stroke();
 
         } else if (b.type === 'accelerating') {
-          // Accelerating Bullet: Orange-Red Comet (#FF8800 / #FF2200)
-          ctx.shadowColor = '#FF8800';
-          ctx.shadowBlur = 12;
+          // Accelerating Bullet: Mustard-Apricot (#F4A261)
+          ctx.shadowColor = '#F4A261';
+          ctx.shadowBlur = 2;
 
-          // Outer fiery aura
-          ctx.fillStyle = 'rgba(255, 34, 0, 0.5)';
+          // Outer aura
+          ctx.fillStyle = 'rgba(244, 162, 97, 0.35)';
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 3, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius + 2, 0, Math.PI * 2);
           ctx.fill();
 
           // Core flame
-          ctx.fillStyle = '#FF8800';
+          ctx.fillStyle = '#F4A261';
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
           ctx.fill();
 
-          // Intense yellow center
-          ctx.fillStyle = '#FFFF00';
+          // Mustard Gold center
+          ctx.fillStyle = '#F4C552';
           ctx.beginPath();
           ctx.arc(b.x, b.y, 2.5, 0, Math.PI * 2);
           ctx.fill();
@@ -946,16 +956,16 @@
 
         // 1. Pulsing Outer Ring
         const pulse = 16 + (Math.sin(core.pulseTimer) + 1) * 6;
-        ctx.strokeStyle = hexToRgba('#39FF14', 0.5);
+        ctx.strokeStyle = hexToRgba('#7BE092', 0.5);
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, 0, pulse, 0, Math.PI * 2);
         ctx.stroke();
 
-        // 2. Rotating Glowing Green Hexagon (#39FF14)
+        // 2. Rotating Pastel Mint Hexagon (#7BE092)
         ctx.rotate(core.rotation);
-        ctx.shadowColor = '#39FF14';
-        ctx.shadowBlur = 12;
+        ctx.shadowColor = '#7BE092';
+        ctx.shadowBlur = 3;
 
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
@@ -967,15 +977,15 @@
         }
         ctx.closePath();
 
-        ctx.fillStyle = 'rgba(57, 255, 20, 0.25)';
+        ctx.fillStyle = 'rgba(123, 224, 146, 0.25)';
         ctx.fill();
 
-        ctx.strokeStyle = '#39FF14';
+        ctx.strokeStyle = '#7BE092';
         ctx.lineWidth = 2.5;
         ctx.stroke();
 
         // Inner glowing core dot
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = '#F8FAFC';
         ctx.beginPath();
         ctx.arc(0, 0, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -989,10 +999,10 @@
     renderEmpWaves(ctx) {
       ctx.save();
       for (const wave of this.empWaves) {
-        ctx.strokeStyle = hexToRgba('#39FF14', wave.alpha);
-        ctx.lineWidth = 3;
-        ctx.shadowColor = '#39FF14';
-        ctx.shadowBlur = 14;
+        ctx.strokeStyle = hexToRgba('#7BE092', wave.alpha);
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#7BE092';
+        ctx.shadowBlur = 3;
 
         ctx.beginPath();
         ctx.arc(wave.x, wave.y, wave.currentRadius, 0, Math.PI * 2);
@@ -1009,7 +1019,7 @@
       for (const p of this.particles) {
         ctx.fillStyle = hexToRgba(p.color, p.alpha);
         ctx.shadowColor = p.color;
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = 2;
         ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
       }
       ctx.restore();
@@ -1022,7 +1032,7 @@
         ctx.font = `${ft.size}px "Press Start 2P", monospace`;
         ctx.fillStyle = hexToRgba(ft.color, ft.alpha);
         ctx.shadowColor = ft.color;
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 3;
         ctx.fillText(ft.text, ft.x, ft.y);
       }
       ctx.restore();
@@ -1034,15 +1044,15 @@
     renderHUD(ctx) {
       ctx.save();
 
-      // Translucent Cyber Bar Background
-      ctx.fillStyle = 'rgba(8, 12, 24, 0.92)';
+      // Slate-Navy HUD Bar Background
+      ctx.fillStyle = 'rgba(28, 41, 71, 0.94)';
       ctx.fillRect(0, 0, this.width, 52);
 
-      // Glowing Neon Divider Line
-      ctx.strokeStyle = '#00FFFF';
+      // Pastel Divider Line
+      ctx.strokeStyle = '#5B78AD';
       ctx.lineWidth = 2;
-      ctx.shadowColor = '#00FFFF';
-      ctx.shadowBlur = 6;
+      ctx.shadowColor = '#6EC6E6';
+      ctx.shadowBlur = 2;
       ctx.beginPath();
       ctx.moveTo(0, 52);
       ctx.lineTo(this.width, 52);
@@ -1057,9 +1067,9 @@
 
       const scoreStr = String(Math.floor(this.score)).padStart(6, '0');
       ctx.font = '12px "Press Start 2P", monospace';
-      ctx.fillStyle = '#FFD700';
-      ctx.shadowColor = '#FFD700';
-      ctx.shadowBlur = 6;
+      ctx.fillStyle = '#F4C552';
+      ctx.shadowColor = '#F4C552';
+      ctx.shadowBlur = 2;
       ctx.fillText(scoreStr, 16, 38);
       ctx.shadowBlur = 0;
 
@@ -1070,11 +1080,8 @@
       ctx.fillText('TIME', 200, 20);
 
       ctx.font = '11px "Press Start 2P", monospace';
-      ctx.fillStyle = '#00FFFF';
-      ctx.shadowColor = '#00FFFF';
-      ctx.shadowBlur = 6;
+      ctx.fillStyle = '#6EC6E6';
       ctx.fillText(formatTime(this.timeSurvived), 200, 38);
-      ctx.shadowBlur = 0;
 
       // 3. DANGER LEVEL
       ctx.font = '8px "Press Start 2P", monospace';
@@ -1083,12 +1090,9 @@
       ctx.fillText('DANGER', 360, 20);
 
       ctx.font = '11px "Press Start 2P", monospace';
-      const dangerColor = this.dangerLevel >= 7 ? '#FF0055' : (this.dangerLevel >= 4 ? '#FF8800' : '#39FF14');
+      const dangerColor = this.dangerLevel >= 7 ? '#F2546D' : (this.dangerLevel >= 4 ? '#F7A072' : '#7BE092');
       ctx.fillStyle = dangerColor;
-      ctx.shadowColor = dangerColor;
-      ctx.shadowBlur = 6;
       ctx.fillText(`LV.${String(this.dangerLevel).padStart(2, '0')}`, 360, 38);
-      ctx.shadowBlur = 0;
 
       // 4. CORES COLLECTED
       ctx.font = '8px "Press Start 2P", monospace';
@@ -1096,13 +1100,9 @@
       ctx.textAlign = 'right';
       ctx.fillText('CORES', 584, 20);
 
-      // Small green core icon + count
-      ctx.fillStyle = '#39FF14';
-      ctx.shadowColor = '#39FF14';
-      ctx.shadowBlur = 6;
+      ctx.fillStyle = '#7BE092';
       ctx.font = '11px "Press Start 2P", monospace';
       ctx.fillText(`◆ x${String(this.coresCollected).padStart(2, '0')}`, 584, 38);
-      ctx.shadowBlur = 0;
 
       ctx.restore();
     }
@@ -1110,47 +1110,48 @@
     renderGameOver(ctx) {
       ctx.save();
 
-      // Dark translucent overlay
-      ctx.fillStyle = 'rgba(5, 7, 15, 0.88)';
+      // Soft Slate-Navy overlay
+      ctx.fillStyle = 'rgba(22, 34, 58, 0.92)';
       ctx.fillRect(0, 52, this.width, this.height - 52);
 
       const cx = this.width / 2;
       const cy = this.height / 2;
 
-      // Center Cyber Game Over Card
-      ctx.fillStyle = '#0D1122';
+      // Center Game Over Card
+      ctx.fillStyle = '#233457';
       ctx.fillRect(cx - 200, cy - 140, 400, 280);
 
-      ctx.strokeStyle = '#FF007F';
+      ctx.strokeStyle = '#F2546D';
       ctx.lineWidth = 2;
-      ctx.shadowColor = '#FF007F';
-      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#F2546D';
+      ctx.shadowBlur = 3;
       ctx.strokeRect(cx - 200, cy - 140, 400, 280);
 
-      this.drawCornerBrackets(ctx, cx - 200, cy - 140, 400, 280, '#00FFFF');
+      this.drawCornerBrackets(ctx, cx - 200, cy - 140, 400, 280, '#6EC6E6');
 
       ctx.font = '18px "Press Start 2P", monospace';
-      ctx.fillStyle = '#FF007F';
+      ctx.fillStyle = '#F2546D';
       ctx.textAlign = 'center';
       ctx.fillText('CRITICAL IMPACT', cx, cy - 90);
 
       ctx.font = '12px "Press Start 2P", monospace';
-      ctx.fillStyle = '#00FFFF';
-      ctx.shadowColor = '#00FFFF';
-      ctx.shadowBlur = 6;
+      ctx.fillStyle = '#6EC6E6';
+      ctx.shadowColor = '#6EC6E6';
+      ctx.shadowBlur = 2;
       ctx.fillText('SURVIVAL FAILED', cx, cy - 55);
+      ctx.shadowBlur = 0;
 
       ctx.font = '10px "Press Start 2P", monospace';
-      ctx.fillStyle = '#FFD700';
+      ctx.fillStyle = '#F4C552';
       ctx.fillText(`FINAL SCORE: ${Math.floor(this.score).toLocaleString()}`, cx, cy - 10);
 
-      ctx.fillStyle = '#00FFFF';
+      ctx.fillStyle = '#6EC6E6';
       ctx.fillText(`TIME SURVIVED: ${formatTime(this.timeSurvived)}`, cx, cy + 20);
 
-      ctx.fillStyle = '#39FF14';
+      ctx.fillStyle = '#7BE092';
       ctx.fillText(`ENERGY CORES: ${this.coresCollected}`, cx, cy + 50);
 
-      ctx.fillStyle = '#94A3B8';
+      ctx.fillStyle = '#CBD5E1';
       ctx.font = '8px "Press Start 2P", monospace';
       ctx.fillText('ENTER INITIALS TO SAVE RECORD', cx, cy + 95);
 

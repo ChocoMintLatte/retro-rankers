@@ -15,20 +15,21 @@
   const GAME_META = {
     tetris: {
       name: 'NEON TETRIS',
-      desc: 'Classic Block Puzzle with Cyberpunk Speed Rush',
+      desc: '당신이 아는 그 테트리스 맞습니다.',
       classKey: 'NeonTetris',
       controls: [
         { keys: ['←', '→'], desc: '좌우 이동' },
-        { keys: ['↑'], desc: '블록 회전' },
+        { keys: ['↑', 'Z'], desc: '시계 / 반시계 회전' },
         { keys: ['↓'], desc: '소프트 드롭' },
         { keys: ['SPACE'], desc: '하드 드롭' },
+        { keys: ['C', 'SHIFT'], desc: '블록 홀드 (HOLD)' },
         { keys: ['ENTER'], desc: '게임 시작 / 입력 확인' },
         { keys: ['ESC'], desc: '일시정지 / 메인 화면' }
       ]
     },
     dodge: {
       name: 'CYBER DODGE',
-      desc: '360° Bullet Survival & Energy Core Harvest',
+      desc: '이 총알을 과연 당신이 피할 수 있을까?',
       classKey: 'CyberDodge',
       controls: [
         { keys: ['←', '↑', '→', '↓'], desc: '360° 기체 이동' },
@@ -39,7 +40,7 @@
     },
     mathRunner: {
       name: 'MATH RUNNER',
-      desc: 'Fake Ad Gate Shooter with Fast Multipliers',
+      desc: '당신이 광고에서 본 그 게임 맞습니다.',
       classKey: 'MathRunner',
       controls: [
         { keys: ['←', '→'], desc: '좌우 이동' },
@@ -123,6 +124,7 @@
       this.stars = [];
       const w = this.gameCanvas ? this.gameCanvas.width : 600;
       const h = this.gameCanvas ? this.gameCanvas.height : 750;
+      const starColors = ['#F8FAFC', '#6EC6E6', '#F4C552'];
 
       for (let i = 0; i < count; i++) {
         this.stars.push({
@@ -130,7 +132,8 @@
           y: Math.random() * h * 0.65,
           size: Math.random() * 2 + 0.8,
           speed: Math.random() * 0.65 + 0.2,
-          brightness: Math.random()
+          brightness: Math.random(),
+          color: starColors[i % starColors.length]
         });
       }
     }
@@ -533,19 +536,19 @@
       const w = this.gameCanvas.width;
       const h = this.gameCanvas.height;
 
-      ctx.fillStyle = '#060810';
+      ctx.fillStyle = '#18243E';
       ctx.fillRect(0, 0, w, h);
 
-      ctx.fillStyle = '#00FFFF';
+      ctx.fillStyle = '#6EC6E6';
       ctx.font = '18px "Press Start 2P", monospace';
       ctx.textAlign = 'center';
       ctx.fillText(gameName, w / 2, h / 2 - 30);
 
-      ctx.fillStyle = '#FF007F';
+      ctx.fillStyle = '#F2546D';
       ctx.font = '11px "Press Start 2P", monospace';
       ctx.fillText('INSERTING CARTRIDGE...', w / 2, h / 2 + 10);
 
-      ctx.fillStyle = '#7E8B9B';
+      ctx.fillStyle = '#B8CBE8';
       ctx.font = '9px "Press Start 2P", monospace';
       ctx.fillText('PRESS [ESC] TO RETURN', w / 2, h / 2 + 50);
     }
@@ -787,16 +790,15 @@
       const w = this.gameCanvas.width;
       const h = this.gameCanvas.height;
 
-      // 1. Cyber Dark Gradient Background
+      // 1. Patch Pastel Night-Sky Slate-Blue Gradient Background
       const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-      bgGrad.addColorStop(0, '#04060C');
-      bgGrad.addColorStop(0.55, '#0E0B1A');
-      bgGrad.addColorStop(1, '#050711');
+      bgGrad.addColorStop(0, '#18243E');
+      bgGrad.addColorStop(0.55, '#24365E');
+      bgGrad.addColorStop(1, '#1B2947');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // 2. Starfield with Twinkle
-      ctx.fillStyle = '#00FFFF';
+      // 2. Starfield with Soft Pastel Colors
       for (const s of this.stars) {
         s.y += s.speed;
         if (s.y > h * 0.62) {
@@ -806,24 +808,25 @@
         s.brightness += (Math.random() - 0.5) * 0.1;
         s.brightness = Math.max(0.2, Math.min(1.0, s.brightness));
 
-        ctx.globalAlpha = s.brightness * 0.75;
+        ctx.fillStyle = s.color || '#F8FAFC';
+        ctx.globalAlpha = s.brightness * 0.85;
         ctx.fillRect(s.x, s.y, s.size, s.size);
       }
       ctx.globalAlpha = 1.0;
 
-      // 3. Neon Sun / Cyber Glow at Horizon
+      // 3. Horizon Glow in Soft Pastel Rose / Sky-Blue
       const horizonY = h * 0.60;
       const sunGrad = ctx.createRadialGradient(w / 2, horizonY, 10, w / 2, horizonY, 130);
-      sunGrad.addColorStop(0, 'rgba(255, 0, 127, 0.35)');
-      sunGrad.addColorStop(0.5, 'rgba(0, 255, 255, 0.12)');
+      sunGrad.addColorStop(0, 'rgba(242, 84, 109, 0.35)');
+      sunGrad.addColorStop(0.5, 'rgba(110, 198, 230, 0.2)');
       sunGrad.addColorStop(1, 'transparent');
       ctx.fillStyle = sunGrad;
       ctx.fillRect(0, horizonY - 120, w, 180);
 
-      // 4. Glowing Horizon Line
-      ctx.shadowColor = '#00FFFF';
-      ctx.shadowBlur = 12;
-      ctx.strokeStyle = '#00FFFF';
+      // 4. Subtle Horizon Line (Reduced Blur)
+      ctx.shadowColor = '#6EC6E6';
+      ctx.shadowBlur = 3;
+      ctx.strokeStyle = '#6EC6E6';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, horizonY);
@@ -831,7 +834,7 @@
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // 5. 3D Moving Perspective Grid Floor
+      // 5. 3D Moving Perspective Grid Floor in Soft Pastel Rose & Sky-Blue
       this.gridOffset = (this.gridOffset + 1.2) % 36;
       const vpX = w / 2; // Vanishing point
       const vpY = horizonY;
@@ -841,8 +844,8 @@
       ctx.rect(0, horizonY, w, h - horizonY);
       ctx.clip();
 
-      // Perspective Vertical (Converging) Lines
-      ctx.strokeStyle = 'rgba(255, 0, 127, 0.35)';
+      // Perspective Vertical (Converging) Lines (Soft Pastel Rose)
+      ctx.strokeStyle = 'rgba(242, 84, 109, 0.35)';
       ctx.lineWidth = 1.5;
       const lineCount = 18;
       for (let i = -lineCount; i <= lineCount; i++) {
@@ -853,8 +856,8 @@
         ctx.stroke();
       }
 
-      // Scrolling Horizontal Lines (Exponential Spacing for 3D Depth)
-      ctx.strokeStyle = 'rgba(0, 255, 255, 0.45)';
+      // Scrolling Horizontal Lines (Soft Pastel Sky-Blue Grid)
+      ctx.strokeStyle = 'rgba(110, 198, 230, 0.4)';
       ctx.lineWidth = 1.5;
       for (let y = 0; y < 14; y++) {
         const progress = Math.pow((y * 24 + this.gridOffset) / 336, 2.2);
