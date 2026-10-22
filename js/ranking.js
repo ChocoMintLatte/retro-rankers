@@ -11,12 +11,47 @@
 
   const STORAGE_KEY = 'RETRO_RANKERS_DB_V1';
 
+  // Check URL query param: ?db=https://...
+  if (typeof window !== 'undefined' && window.location && window.location.search) {
+    try {
+      const urlDb = new URLSearchParams(window.location.search).get('db');
+      if (urlDb && typeof localStorage !== 'undefined') {
+        localStorage.setItem('RETRO_FIREBASE_URL', urlDb.trim());
+      }
+    } catch (e) {
+      console.warn('[RankingService] Failed to parse URLSearchParams:', e);
+    }
+  }
+
+  const CLOUD_CONFIG = {
+    // Firebase Realtime Database URL만 입력하면 모든 PC에서 실시간으로 랭킹이 동기화됩니다.
+    // 예: 'https://retro-rankers-default-rtdb.asia-southeast1.firebasedatabase.app'
+    FIREBASE_DB_URL: (typeof localStorage !== 'undefined' ? localStorage.getItem('RETRO_FIREBASE_URL') : null)
+      || 'https://retro-rankers-default-rtdb.firebaseio.com'
+  };
+
   class RankingService {
     constructor() {
       this.storageKey = STORAGE_KEY;
       this.supportedGames = ['tetris', 'dodge', 'mathRunner'];
       this.activeSession = null;
+      this.listeners = [];
+      this._isPushing = false;
+      this._hasInitialSynced = false;
+
+      // Cloud Configuration & URL Normalization
+      const rawUrl = (CLOUD_CONFIG.FIREBASE_DB_URL || '').trim();
+      this.firebaseUrl = rawUrl ? rawUrl.replace(/\/+$/, '') : '';
+
       this.db = this._loadOrInitDB();
+
+      // Real-time Cloud Synchronization (Poll every 4 seconds)
+      if (this.firebaseUrl) {
+        this._syncFromCloud();
+        this.syncTimer = setInterval(() => {
+          this._syncFromCloud();
+        }, 4000);
+      }
     }
 
     /**
@@ -143,6 +178,179 @@
         localStorage.setItem(this.storageKey, JSON.stringify(this.db));
       } catch (e) {
         console.error('[RankingService] Storage write error:', e);
+      }
+    }
+
+    /**
+     * Register a callback to be notified when cloud sync updates rankings/feed
+     * @param {Function} callback
+     * @returns {Function} Unsubscribe function
+     */
+    onSync(callback) {
+      if (typeof callback === 'function') {
+        this.listeners.push(callback);
+      }
+      return () => {
+        this.listeners = this.listeners.filter(cb => cb !== callback);
+      };
+    }
+
+    /**
+     * Notify all registered sync listeners
+     */
+    _notifyListeners() {
+      for (const listener of this.listeners) {
+        try {
+          listener(this.db);
+        } catch (e) {
+          console.error('[RankingService] Listener callback error:', e);
+        }
+      }
+    }
+
+    /**
+     * Normalize arrays from Firebase (handles object-to-array conversion)
+     */
+    _normalizeArray(val) {
+      if (Array.isArray(val)) return val;
+      if (val && typeof val === 'object') return Object.values(val);
+      return [];
+    }
+
+    /**
+     * Fetch latest rankings and feed from Firebase Realtime Database
+     */
+    async _syncFromCloud() {
+      if (!this.firebaseUrl || this._isPushing) return;
+
+      try {
+        const res = await fetch(`${this.firebaseUrl}/retro_rankers.json`);
+        if (!res.ok) {
+          console.warn('[RankingService] Cloud sync HTTP error:', res.status, res.statusText);
+          return;
+        }
+
+        const data = await res.json();
+
+        // 1. If cloud returns null (empty database on first connect), automatically PUT this.db to seed
+        if (data === null) {
+          await fetch(`${this.firebaseUrl}/retro_rankers.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.db)
+          });
+          return;
+        }
+
+        // 2. If cloud returns valid data (scores and feed), update this.db, save to localStorage, and notify all this.listeners
+        if (data && typeof data === 'object' && data.scores) {
+          const normalizedScores = {};
+          for (const g of this.supportedGames) {
+            normalizedScores[g] = this._normalizeArray(data.scores[g]);
+          }
+          const normalizedFeed = this._normalizeArray(data.feed);
+
+          const newDb = {
+            version: data.version || 1,
+            scores: normalizedScores,
+            feed: normalizedFeed
+          };
+
+          const oldJson = JSON.stringify(this.db);
+          const newJson = JSON.stringify(newDb);
+
+          if (oldJson !== newJson || !this._hasInitialSynced) {
+            this._hasInitialSynced = true;
+            this.db = newDb;
+            this._saveToStorage();
+            this._notifyListeners();
+          }
+        }
+      } catch (e) {
+        console.warn('[RankingService] Cloud sync error:', e);
+      }
+    }
+
+    /**
+     * Asynchronously push score to cloud with safe concurrent merge
+     * @param {string} validGameId
+     * @param {object} newEntry
+     * @param {object} newFeedItem
+     */
+    async _pushScoreToCloud(validGameId, newEntry, newFeedItem) {
+      if (!this.firebaseUrl) return;
+
+      this._isPushing = true;
+      try {
+        // 1. Fetch latest cloud database first so other PCs' scores aren't overwritten
+        let cloudDb = null;
+        try {
+          const res = await fetch(`${this.firebaseUrl}/retro_rankers.json`);
+          if (res.ok) {
+            cloudDb = await res.json();
+          }
+        } catch (fetchErr) {
+          console.warn('[RankingService] Cloud fetch failed before push, falling back to local db:', fetchErr);
+        }
+
+        if (!cloudDb || typeof cloudDb !== 'object' || !cloudDb.scores) {
+          cloudDb = JSON.parse(JSON.stringify(this.db));
+        }
+
+        if (!cloudDb.scores) cloudDb.scores = {};
+        for (const g of this.supportedGames) {
+          cloudDb.scores[g] = this._normalizeArray(cloudDb.scores[g] || (this.db.scores && this.db.scores[g]) || []);
+        }
+        cloudDb.feed = this._normalizeArray(cloudDb.feed || this.db.feed || []);
+
+        // 2. Merge newEntry into cloudDb.scores[validGameId], deduplicate by id, sort descending by score, keep top 10
+        const gameScores = [...(cloudDb.scores[validGameId] || [])];
+        if (!gameScores.some(item => item && item.id === newEntry.id)) {
+          gameScores.push(newEntry);
+        }
+
+        const scoreMap = new Map();
+        for (const item of gameScores) {
+          if (item && item.id) {
+            if (!scoreMap.has(item.id) || scoreMap.get(item.id).score < item.score) {
+              scoreMap.set(item.id, item);
+            }
+          }
+        }
+        const mergedScores = Array.from(scoreMap.values());
+        mergedScores.sort((a, b) => (b.score || 0) - (a.score || 0));
+        cloudDb.scores[validGameId] = mergedScores.slice(0, 10);
+
+        // 3. Merge newFeedItem into cloudDb.feed, deduplicate by id, keep top 20
+        const feedList = [newFeedItem, ...(cloudDb.feed || [])];
+        const feedMap = new Map();
+        for (const item of feedList) {
+          if (item && item.id) {
+            if (!feedMap.has(item.id)) {
+              feedMap.set(item.id, item);
+            }
+          }
+        }
+        cloudDb.feed = Array.from(feedMap.values()).slice(0, 20);
+
+        // 4. PUT the merged cloudDb back to ${this.firebaseUrl}/retro_rankers.json, update this.db, and notify this.listeners
+        const putRes = await fetch(`${this.firebaseUrl}/retro_rankers.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cloudDb)
+        });
+
+        if (putRes.ok) {
+          this.db = cloudDb;
+          this._saveToStorage();
+          this._notifyListeners();
+        } else {
+          console.warn('[RankingService] Cloud PUT failed with status:', putRes.status);
+        }
+      } catch (err) {
+        console.error('[RankingService] Error pushing score to cloud:', err);
+      } finally {
+        this._isPushing = false;
       }
     }
 
@@ -288,21 +496,30 @@
         this.db.feed = [];
       }
 
-      this.db.feed.unshift({
-        id: 'f_' + Date.now(),
+      const newFeedItem = {
+        id: 'f_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         time: this._getTimeString(),
         msg: feedMsg,
         initials: cleanInitials,
         score,
         rank,
         gameId: validGameId
-      });
+      };
+
+      this.db.feed.unshift(newFeedItem);
 
       // Keep maximum 20 feed items
       this.db.feed = this.db.feed.slice(0, 20);
 
       // Save to localStorage
       this._saveToStorage();
+
+      // Asynchronously push to cloud in background
+      if (this.firebaseUrl) {
+        this._pushScoreToCloud(validGameId, newEntry, newFeedItem).catch(err => {
+          console.warn('[RankingService] Background cloud push error:', err);
+        });
+      }
 
       return {
         valid: true,
@@ -346,7 +563,43 @@
     resetToSeed() {
       this.db = this._getSeedData();
       this._saveToStorage();
+      if (this.firebaseUrl) {
+        fetch(`${this.firebaseUrl}/retro_rankers.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.db)
+        }).catch(err => {
+          console.warn('[RankingService] Failed to reset cloud database:', err);
+        });
+      }
+      this._notifyListeners();
       return this.db;
+    }
+
+    /**
+     * Configure Firebase URL dynamically at runtime
+     * @param {string} url
+     */
+    setFirebaseUrl(url) {
+      const rawUrl = (url || '').trim();
+      this.firebaseUrl = rawUrl ? rawUrl.replace(/\/+$/, '') : '';
+      if (typeof localStorage !== 'undefined') {
+        if (this.firebaseUrl) {
+          localStorage.setItem('RETRO_FIREBASE_URL', this.firebaseUrl);
+        } else {
+          localStorage.removeItem('RETRO_FIREBASE_URL');
+        }
+      }
+      if (this.syncTimer) {
+        clearInterval(this.syncTimer);
+        this.syncTimer = null;
+      }
+      if (this.firebaseUrl) {
+        this._syncFromCloud();
+        this.syncTimer = setInterval(() => {
+          this._syncFromCloud();
+        }, 4000);
+      }
     }
   }
 

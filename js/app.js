@@ -82,6 +82,14 @@
       this.renderLeaderboard();
       this.renderLiveFeed();
 
+      // Cloud Real-Time Ranking Synchronization Listener
+      if (window.rankingService && typeof window.rankingService.onSync === 'function') {
+        window.rankingService.onSync(() => {
+          this.renderLeaderboard();
+          this.renderLiveFeed();
+        });
+      }
+
       // Launch Unified 60fps Animation & Update Loop
       this._startMainLoop();
     }
@@ -699,6 +707,7 @@
 
       if (submitRes && submitRes.rank && submitRes.rank <= 10) {
         // Apply 3-second golden flashing animation (.new-record)
+        this.highlightedEntryId = submitRes.entryId;
         const rows = this.leaderboardBody ? this.leaderboardBody.querySelectorAll('.rank-row') : [];
         const targetRow = rows[submitRes.rank - 1];
 
@@ -710,6 +719,7 @@
         if (this.highlightTimer) clearTimeout(this.highlightTimer);
         this.highlightTimer = setTimeout(() => {
           if (targetRow) targetRow.classList.remove('new-record');
+          this.highlightedEntryId = null;
           this.highlightTimer = null;
         }, 3000);
       }
@@ -746,8 +756,10 @@
         else if (rankNum === 2) rankClass = 'rank-2';
         else if (rankNum === 3) rankClass = 'rank-3';
 
+        const isHighlighted = (this.highlightTimer && this.highlightedEntryId && entry.id === this.highlightedEntryId) ? ' new-record' : '';
+
         return `
-          <div class="rank-row ${rankClass}" data-id="${entry.id}">
+          <div class="rank-row ${rankClass}${isHighlighted}" data-id="${entry.id}">
             <span class="col-rank">#${String(rankNum).padStart(2, '0')}</span>
             <span class="col-init">${entry.initials}</span>
             <span class="col-score">${window.rankingService.formatScore(entry.score)}</span>
