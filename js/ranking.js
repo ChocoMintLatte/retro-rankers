@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  * RETRO RANKERS - RANKING & ANTI-CHEAT SERVICE (js/ranking.js)
- * Persistent LocalStorage Database (Key: 'RETRO_RANKERS_DB_V1')
+ * Persistent LocalStorage Database (Key: 'RETRO_RANKERS_DB_V3')
  * Top 10 Hall of Fame, Anti-Cheat Verification, Session Hash & Live Feed
  * ============================================================================
  */
@@ -9,7 +9,7 @@
 (function (window) {
   'use strict';
 
-  const STORAGE_KEY = 'RETRO_RANKERS_DB_V1';
+  const STORAGE_KEY = 'RETRO_RANKERS_DB_V3';
 
   // Check URL query param: ?db=https://...
   if (typeof window !== 'undefined' && window.location && window.location.search) {
@@ -33,7 +33,15 @@
   class RankingService {
     constructor() {
       this.storageKey = STORAGE_KEY;
-      this.supportedGames = ['tetris', 'dodge', 'mathRunner'];
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('RETRO_RANKERS_DB_V1');
+          localStorage.removeItem('RETRO_RANKERS_DB_V2');
+        }
+      } catch (e) {
+        // ignore
+      }
+      this.supportedGames = ['tetris', 'dodge', 'mathRunner', 'stack', 'survivor'];
       this.activeSession = null;
       this.listeners = [];
       this._isPushing = false;
@@ -86,56 +94,41 @@
     }
 
     /**
-     * Initial Seed Data for TOP 10 per game and Live Feed
+     * Initial Seed Data for TOP 10 per game and Live Feed (Clean V3: Empty records)
      */
     _getSeedData() {
-      const now = Date.now();
       return {
-        version: 1,
+        version: 3,
         scores: {
-          tetris: [
-            { id: 'seed_t_01', initials: 'KJH', score: 84500, stage: 'LV.18', timestamp: now - 3600000 * 5 },
-            { id: 'seed_t_02', initials: 'CS1', score: 72300, stage: 'LV.15', timestamp: now - 3600000 * 8 },
-            { id: 'seed_t_03', initials: 'DEV', score: 65000, stage: 'LV.14', timestamp: now - 3600000 * 12 },
-            { id: 'seed_t_04', initials: 'NEO', score: 58200, stage: 'LV.12', timestamp: now - 3600000 * 15 },
-            { id: 'seed_t_05', initials: 'CYB', score: 51000, stage: 'LV.11', timestamp: now - 3600000 * 19 },
-            { id: 'seed_t_06', initials: 'AAA', score: 45600, stage: 'LV.10', timestamp: now - 3600000 * 24 },
-            { id: 'seed_t_07', initials: 'PXL', score: 39800, stage: 'LV.08', timestamp: now - 3600000 * 30 },
-            { id: 'seed_t_08', initials: 'DOS', score: 33400, stage: 'LV.07', timestamp: now - 3600000 * 36 },
-            { id: 'seed_t_09', initials: 'BOB', score: 26100, stage: 'LV.05', timestamp: now - 3600000 * 42 },
-            { id: 'seed_t_10', initials: 'ACE', score: 18900, stage: 'LV.04', timestamp: now - 3600000 * 48 }
-          ],
-          dodge: [
-            { id: 'seed_d_01', initials: 'FLY', score: 92000, stage: '65s', timestamp: now - 3600000 * 3 },
-            { id: 'seed_d_02', initials: 'DOD', score: 79500, stage: '55s', timestamp: now - 3600000 * 6 },
-            { id: 'seed_d_03', initials: 'SPD', score: 68000, stage: '48s', timestamp: now - 3600000 * 10 },
-            { id: 'seed_d_04', initials: 'EMP', score: 59200, stage: '42s', timestamp: now - 3600000 * 14 },
-            { id: 'seed_d_05', initials: 'ACE', score: 48100, stage: '36s', timestamp: now - 3600000 * 18 },
-            { id: 'seed_d_06', initials: 'NEO', score: 41000, stage: '30s', timestamp: now - 3600000 * 22 },
-            { id: 'seed_d_07', initials: 'RUN', score: 35500, stage: '26s', timestamp: now - 3600000 * 28 },
-            { id: 'seed_d_08', initials: 'BOT', score: 27400, stage: '20s', timestamp: now - 3600000 * 34 },
-            { id: 'seed_d_09', initials: 'PRO', score: 21000, stage: '16s', timestamp: now - 3600000 * 40 },
-            { id: 'seed_d_10', initials: 'WIN', score: 14200, stage: '12s', timestamp: now - 3600000 * 46 }
-          ],
-          mathRunner: [
-            { id: 'seed_m_01', initials: 'CAL', score: 95000, stage: 'G.45', timestamp: now - 3600000 * 2 },
-            { id: 'seed_m_02', initials: 'NUM', score: 81200, stage: 'G.38', timestamp: now - 3600000 * 5 },
-            { id: 'seed_m_03', initials: 'X2X', score: 71000, stage: 'G.33', timestamp: now - 3600000 * 9 },
-            { id: 'seed_m_04', initials: 'SUB', score: 62500, stage: 'G.28', timestamp: now - 3600000 * 13 },
-            { id: 'seed_m_05', initials: 'PLS', score: 53000, stage: 'G.24', timestamp: now - 3600000 * 17 },
-            { id: 'seed_m_06', initials: 'CST', score: 44800, stage: 'G.20', timestamp: now - 3600000 * 21 },
-            { id: 'seed_m_07', initials: 'RUN', score: 38200, stage: 'G.17', timestamp: now - 3600000 * 27 },
-            { id: 'seed_m_08', initials: 'MATH', score: 31000, stage: 'G.14', timestamp: now - 3600000 * 33 },
-            { id: 'seed_m_09', initials: 'INT', score: 24500, stage: 'G.11', timestamp: now - 3600000 * 39 },
-            { id: 'seed_m_10', initials: 'ZERO', score: 16000, stage: 'G.08', timestamp: now - 3600000 * 45 }
-          ]
+          tetris: [],
+          dodge: [],
+          mathRunner: [],
+          stack: [],
+          survivor: []
         },
-        feed: [
-          { id: 'f_01', time: '12:45', msg: '[TETRIS] NEO님이 058,200점으로 4위 달성!', initials: 'NEO', score: 58200, gameId: 'tetris' },
-          { id: 'f_02', time: '12:38', msg: '[DODGE] EMP님이 059,200점으로 4위 달성!', initials: 'EMP', score: 59200, gameId: 'dodge' },
-          { id: 'f_03', time: '12:20', msg: '[SYSTEM] CSE FESTIVAL ARCADE BOOTH OPEN', initials: 'CSE', score: 0, gameId: 'system' }
-        ]
+        feed: []
       };
+    }
+
+    /**
+     * Filters an array to keep only real player records (excluding any seed_ dummy records)
+     * @param {Array} arr
+     * @returns {Array}
+     */
+    _filterOutSeedEntries(arr) {
+      if (!Array.isArray(arr)) return [];
+      return arr.filter(item => item && item.id && !String(item.id).startsWith('seed_'));
+    }
+
+    /**
+     * Filters an array to exclude legacy dummy seed feed items
+     * @param {Array} arr
+     * @returns {Array}
+     */
+    _filterOutSeedFeed(arr) {
+      if (!Array.isArray(arr)) return [];
+      const legacySeedFeedIds = new Set(['f_01', 'f_02', 'f_03']);
+      return arr.filter(item => item && item.id && !legacySeedFeedIds.has(item.id) && !String(item.id).startsWith('seed_'));
     }
 
     /**
@@ -146,13 +139,17 @@
         const raw = localStorage.getItem(this.storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed && parsed.scores && parsed.feed) {
-            // Ensure all supported games exist
-            for (const g of this.supportedGames) {
-              if (!Array.isArray(parsed.scores[g])) {
-                parsed.scores[g] = this._getSeedData().scores[g];
-              }
+          if (parsed && typeof parsed === 'object' && parsed.version === 3) {
+            if (!parsed.scores || typeof parsed.scores !== 'object') {
+              parsed.scores = {};
             }
+            // Ensure all supported games exist as clean arrays without dummy seeds
+            for (const g of this.supportedGames) {
+              const gameScores = Array.isArray(parsed.scores[g]) ? parsed.scores[g] : [];
+              parsed.scores[g] = this._filterOutSeedEntries(gameScores);
+            }
+            parsed.feed = this._filterOutSeedFeed(Array.isArray(parsed.feed) ? parsed.feed : []);
+            parsed.version = 3;
             return parsed;
           }
         }
@@ -160,7 +157,7 @@
         console.warn('[RankingService] Failed to load localStorage DB, reseeding:', e);
       }
 
-      // Seed initial dummy data
+      // Seed initial empty DB (Version 3)
       const seed = this._getSeedData();
       try {
         localStorage.setItem(this.storageKey, JSON.stringify(seed));
@@ -232,8 +229,11 @@
 
         const data = await res.json();
 
-        // 1. If cloud returns null (empty database on first connect), automatically PUT this.db to seed
-        if (data === null) {
+        // 1. If cloud is empty or older version (< 3), reset remote and local to fresh version: 3
+        if (data === null || (data && typeof data === 'object' && (data.version || 1) < 3)) {
+          this.db = this._getSeedData();
+          this._saveToStorage();
+          this._notifyListeners();
           await fetch(`${this.firebaseUrl}/retro_rankers.json`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -242,18 +242,22 @@
           return;
         }
 
-        // 2. If cloud returns valid data (scores and feed), update this.db, save to localStorage, and notify all this.listeners
-        if (data && typeof data === 'object' && data.scores) {
+        // 2. When data is valid version: 3, normalize scores and feed
+        if (data && typeof data === 'object' && data.version === 3) {
           const normalizedScores = {};
+
           for (const g of this.supportedGames) {
-            normalizedScores[g] = this._normalizeArray(data.scores[g]);
+            const rawArr = this._normalizeArray(data.scores ? data.scores[g] : null);
+            normalizedScores[g] = this._filterOutSeedEntries(rawArr);
           }
-          const normalizedFeed = this._normalizeArray(data.feed);
+
+          const rawFeed = this._normalizeArray(data.feed);
+          const filteredFeed = this._filterOutSeedFeed(rawFeed);
 
           const newDb = {
-            version: data.version || 1,
+            version: 3,
             scores: normalizedScores,
-            feed: normalizedFeed
+            feed: filteredFeed
           };
 
           const oldJson = JSON.stringify(this.db);
@@ -293,15 +297,17 @@
           console.warn('[RankingService] Cloud fetch failed before push, falling back to local db:', fetchErr);
         }
 
-        if (!cloudDb || typeof cloudDb !== 'object' || !cloudDb.scores) {
-          cloudDb = JSON.parse(JSON.stringify(this.db));
+        if (!cloudDb || typeof cloudDb !== 'object' || (cloudDb.version || 1) < 3 || !cloudDb.scores) {
+          cloudDb = this._getSeedData();
         }
 
         if (!cloudDb.scores) cloudDb.scores = {};
         for (const g of this.supportedGames) {
-          cloudDb.scores[g] = this._normalizeArray(cloudDb.scores[g] || (this.db.scores && this.db.scores[g]) || []);
+          const rawArr = this._normalizeArray(cloudDb.scores[g] || (this.db.scores && this.db.scores[g]) || []);
+          cloudDb.scores[g] = this._filterOutSeedEntries(rawArr);
         }
-        cloudDb.feed = this._normalizeArray(cloudDb.feed || this.db.feed || []);
+        cloudDb.feed = this._filterOutSeedFeed(this._normalizeArray(cloudDb.feed || this.db.feed || []));
+        cloudDb.version = 3;
 
         // 2. Merge newEntry into cloudDb.scores[validGameId], deduplicate by id, sort descending by score, keep top 10
         const gameScores = [...(cloudDb.scores[validGameId] || [])];
@@ -486,7 +492,9 @@
       const gameLabels = {
         tetris: 'TETRIS',
         dodge: 'DODGE',
-        mathRunner: 'MATH RUNNER'
+        mathRunner: 'MATH RUNNER',
+        stack: 'PIXEL STACK',
+        survivor: 'VAMP SURVIVOR'
       };
       const gameLabel = gameLabels[validGameId] || validGameId.toUpperCase();
       const rankText = rank ? `${rank}위` : '완주';

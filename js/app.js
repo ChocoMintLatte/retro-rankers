@@ -49,6 +49,29 @@
         { keys: ['ENTER'], desc: '게임 시작 / 입력 확인' },
         { keys: ['ESC'], desc: '일시정지 / 메인 화면' }
       ]
+    },
+    stack: {
+      name: 'PIXEL STACK',
+      desc: '한 끗 차이로 갈리는 극한의 타이밍 탑 쌓기!',
+      classKey: 'PixelStack',
+      controls: [
+        { keys: ['SPACE', '↓'], desc: '블록 내려놓기' },
+        { keys: ['PERFECT'], desc: '연속 퍼펙트 시 블록 크기 회복' },
+        { keys: ['ENTER'], desc: '게임 시작 / 입력 확인' },
+        { keys: ['ESC'], desc: '일시정지 / 메인 화면' }
+      ]
+    },
+    survivor: {
+      name: 'VAMP SURVIVOR',
+      desc: '몰려오는 몬스터 군단 속에서 끝까지 살아남아라!',
+      classKey: 'PixelSurvivor',
+      controls: [
+        { keys: ['←', '↑', '→', '↓'], desc: '캐릭터 360° 이동' },
+        { keys: ['AUTO'], desc: '주변 몬스터 자동 공격' },
+        { keys: ['1', '2', '3'], desc: '레벨업 스킬 카드 선택' },
+        { keys: ['ENTER'], desc: '게임 시작 / 입력 확인' },
+        { keys: ['ESC'], desc: '일시정지 / 메인 화면' }
+      ]
     }
   };
 
@@ -342,21 +365,23 @@
           return;
         }
 
-        // Cartridge Quick Switch via 1, 2, 3
+        // Cartridge Quick Switch via 1, 2, 3, 4, 5
         if (e.key === '1') this.selectCartridge('tetris', true);
         if (e.key === '2') this.selectCartridge('dodge', true);
         if (e.key === '3') this.selectCartridge('mathRunner', true);
+        if (e.key === '4') this.selectCartridge('stack', true);
+        if (e.key === '5') this.selectCartridge('survivor', true);
 
         // ArrowUp / ArrowDown cartridge cycle
         if (e.key === 'ArrowUp') {
           e.preventDefault();
-          const keys = ['tetris', 'dodge', 'mathRunner'];
+          const keys = Object.keys(GAME_META);
           const idx = keys.indexOf(this.selectedGame);
           const next = keys[(idx - 1 + keys.length) % keys.length];
           this.selectCartridge(next, true);
         } else if (e.key === 'ArrowDown') {
           e.preventDefault();
-          const keys = ['tetris', 'dodge', 'mathRunner'];
+          const keys = Object.keys(GAME_META);
           const idx = keys.indexOf(this.selectedGame);
           const next = keys[(idx + 1) % keys.length];
           this.selectCartridge(next, true);
@@ -608,12 +633,24 @@
         if (details && typeof details === 'object') gameLog = details;
       } else if (stageOrLog && typeof stageOrLog === 'object') {
         gameLog = stageOrLog;
-        if (gameLog.maxLevel !== undefined) {
+        if (gameLog.floor !== undefined) {
+          stageStr = `${gameLog.floor}F`;
+        } else if (gameLog.maxLevel !== undefined) {
           stageStr = `LV.${String(gameLog.maxLevel).padStart(2, '0')}`;
         } else if (gameLog.timeSurvived !== undefined) {
           stageStr = `${Math.floor(gameLog.timeSurvived)}s`;
         } else if (gameLog.gatesPassed !== undefined) {
           stageStr = `G.${String(gameLog.gatesPassed).padStart(2, '0')}`;
+        } else if (gameLog.stage) {
+          stageStr = String(gameLog.stage);
+        }
+      }
+
+      if (stageStr === 'CLEAR' && gameLog && typeof gameLog === 'object') {
+        if (gameLog.floor !== undefined) {
+          stageStr = `${gameLog.floor}F`;
+        } else if (gameLog.maxLevel !== undefined) {
+          stageStr = `LV.${String(gameLog.maxLevel).padStart(2, '0')}`;
         } else if (gameLog.stage) {
           stageStr = String(gameLog.stage);
         }
@@ -749,6 +786,16 @@
         this.attractHighScore.textContent = window.rankingService.formatScore(topScore);
       }
 
+      if (scores.length === 0) {
+        this.leaderboardBody.innerHTML = `
+          <div class="leaderboard-empty">
+            <div class="empty-badge">NO RECORD YET</div>
+            <p class="empty-msg">플레이 해서 당신의 기록을 자랑하세요</p>
+          </div>
+        `;
+        return;
+      }
+
       this.leaderboardBody.innerHTML = scores.map((entry, idx) => {
         const rankNum = idx + 1;
         let rankClass = '';
@@ -776,6 +823,16 @@
       if (!this.liveFeedList || !window.rankingService) return;
 
       const feed = window.rankingService.getFeed();
+
+      if (feed.length === 0) {
+        this.liveFeedList.innerHTML = `
+          <div class="feed-item feed-empty">
+            <span class="feed-time">LIVE</span>
+            <span class="feed-msg">플레이 해서 당신의 기록을 자랑하세요</span>
+          </div>
+        `;
+        return;
+      }
 
       this.liveFeedList.innerHTML = feed.map(item => {
         // Highlight initials with neon cyan

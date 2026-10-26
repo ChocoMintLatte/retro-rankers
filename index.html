@@ -85,6 +85,30 @@
               </div>
               <div class="cartridge-pins"></div>
             </div>
+
+            <div class="cartridge-item" data-game="stack" tabindex="0">
+              <div class="cartridge-notch"></div>
+              <div class="cartridge-label">
+                <span class="cartridge-id">04</span>
+                <div class="cartridge-info">
+                  <span class="cartridge-name">PIXEL STACK</span>
+                  <span class="cartridge-desc">한 끗 차이로 갈리는 극한의 타이밍 탑 쌓기!</span>
+                </div>
+              </div>
+              <div class="cartridge-pins"></div>
+            </div>
+
+            <div class="cartridge-item" data-game="survivor" tabindex="0">
+              <div class="cartridge-notch"></div>
+              <div class="cartridge-label">
+                <span class="cartridge-id">05</span>
+                <div class="cartridge-info">
+                  <span class="cartridge-name">VAMP SURVIVOR</span>
+                  <span class="cartridge-desc">몰려오는 몬스터 군단 속에서 끝까지 살아남아라!</span>
+                </div>
+              </div>
+              <div class="cartridge-pins"></div>
+            </div>
           </div>
         </section>
 
@@ -153,7 +177,7 @@
 
                 <div class="attract-score-box">
                   <span class="score-label">ALL TIME HIGH SCORE</span>
-                  <span id="attractHighScore" class="score-value neon-text-gold">050,000</span>
+                  <span id="attractHighScore" class="score-value neon-text-gold">000,000</span>
                 </div>
 
                 <div class="attract-prompt-wrap">
@@ -232,66 +256,9 @@
           </div>
 
           <div id="leaderboardBody" class="leaderboard-body">
-            <!-- Dynamically populated rows; sample markup structure: -->
-            <div class="rank-row rank-1">
-              <span class="col-rank">#01</span>
-              <span class="col-init">AAA</span>
-              <span class="col-score">050,000</span>
-              <span class="col-date">LV.15</span>
-            </div>
-            <div class="rank-row rank-2">
-              <span class="col-rank">#02</span>
-              <span class="col-init">NEO</span>
-              <span class="col-score">042,500</span>
-              <span class="col-date">LV.12</span>
-            </div>
-            <div class="rank-row rank-3">
-              <span class="col-rank">#03</span>
-              <span class="col-init">CYB</span>
-              <span class="col-score">038,100</span>
-              <span class="col-date">LV.10</span>
-            </div>
-            <div class="rank-row">
-              <span class="col-rank">#04</span>
-              <span class="col-init">CSE</span>
-              <span class="col-score">031,200</span>
-              <span class="col-date">LV.08</span>
-            </div>
-            <div class="rank-row">
-              <span class="col-rank">#05</span>
-              <span class="col-init">PXL</span>
-              <span class="col-score">028,400</span>
-              <span class="col-date">LV.07</span>
-            </div>
-            <div class="rank-row">
-              <span class="col-rank">#06</span>
-              <span class="col-init">DOS</span>
-              <span class="col-score">022,900</span>
-              <span class="col-date">LV.06</span>
-            </div>
-            <div class="rank-row">
-              <span class="col-rank">#07</span>
-              <span class="col-init">BOB</span>
-              <span class="col-score">019,500</span>
-              <span class="col-date">LV.05</span>
-            </div>
-            <div class="rank-row">
-              <span class="col-rank">#08</span>
-              <span class="col-init">WIN</span>
-              <span class="col-score">015,200</span>
-              <span class="col-date">LV.04</span>
-            </div>
-            <div class="rank-row">
-              <span class="col-rank">#09</span>
-              <span class="col-init">MAX</span>
-              <span class="col-score">011,000</span>
-              <span class="col-date">LV.03</span>
-            </div>
-            <div class="rank-row">
-              <span class="col-rank">#10</span>
-              <span class="col-init">ACE</span>
-              <span class="col-score">008,500</span>
-              <span class="col-date">LV.02</span>
+            <div class="leaderboard-empty">
+              <div class="empty-badge">NO RECORD YET</div>
+              <p class="empty-msg">플레이 해서 당신의 기록을 자랑하세요</p>
             </div>
           </div>
         </section>
@@ -303,17 +270,9 @@
             <h2 class="section-title">LIVE FEED</h2>
           </div>
           <div id="liveFeedList" class="live-feed-list">
-            <div class="feed-item">
-              <span class="feed-time">12:45</span>
-              <span class="feed-msg"><strong class="cyan">NEO</strong> 42,500pt 갱신!</span>
-            </div>
-            <div class="feed-item">
-              <span class="feed-time">12:38</span>
-              <span class="feed-msg"><strong class="magenta">CYB</strong> 신규 랭커 진입</span>
-            </div>
-            <div class="feed-item">
-              <span class="feed-time">12:20</span>
-              <span class="feed-msg"><strong class="green">CSE</strong> FESTIVAL BOOTH OPEN</span>
+            <div class="feed-item feed-empty">
+              <span class="feed-time">LIVE</span>
+              <span class="feed-msg">플레이 해서 당신의 기록을 자랑하세요</span>
             </div>
           </div>
         </section>
@@ -329,6 +288,8 @@
   <script src="js/games/tetris.js"></script>
   <script src="js/games/dodge.js"></script>
   <script src="js/games/mathRunner.js"></script>
+  <script src="js/games/stack.js"></script>
+  <script src="js/games/survivor.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
