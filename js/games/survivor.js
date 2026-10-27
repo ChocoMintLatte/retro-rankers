@@ -143,7 +143,7 @@
       title: '파워 앰프',
       icon: '💥',
       color: '#F4C552',
-      maxLevel: 99,
+      maxLevel: 20,
       getPerk: (currLv) => `모든 무기 공격력 +20% 영구 강화 (+${currLv * 20}% ➔ +${(currLv + 1) * 20}%)`
     }
   ];
@@ -1346,6 +1346,7 @@
         if (opt.id === 'garlic') return this.weapons.garlic.level < opt.maxLevel;
         if (opt.id === 'lightning') return this.weapons.lightning.level < opt.maxLevel;
         if (opt.id === 'boots') return this.bootsLevel < opt.maxLevel;
+        if (opt.id === 'power') return this.powerLevel < opt.maxLevel;
         return true;
       });
 
@@ -1415,7 +1416,7 @@
           break;
         }
         case 'power': {
-          this.powerLevel++;
+          this.powerLevel = Math.min(20, this.powerLevel + 1);
           this.powerBonus = +(1.0 + this.powerLevel * 0.20).toFixed(2);
           this.floatingTexts.push({
             x: this.player.x,
