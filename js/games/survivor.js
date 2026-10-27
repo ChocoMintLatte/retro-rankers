@@ -135,8 +135,13 @@
       title: '응급 처치 & 활력',
       icon: '❤️',
       color: '#F2546D',
-      maxLevel: 99,
-      getPerk: (currLv) => `HP 40% 즉시 회복 & 최대 체력 +25 (${100 + currLv * 25} ➔ ${100 + (currLv + 1) * 25})`
+      maxLevel: 999,
+      getPerk: (currLv) => {
+        if (currLv + 1 >= 30) {
+          return '전체 체력의 20% 즉시 회복 (최대 체력 상한 도달)';
+        }
+        return `HP 40% 즉시 회복 & 최대 체력 +25 (${100 + currLv * 25} ➔ ${100 + (currLv + 1) * 25})`;
+      }
     },
     {
       id: 'power',
@@ -1402,13 +1407,20 @@
           break;
         case 'heal': {
           this.healLevel++;
-          this.player.maxHp += 25;
-          const healAmount = Math.round(this.player.maxHp * 0.4);
+          let healAmount;
+          if (this.healLevel >= 30) {
+            healAmount = Math.round(this.player.maxHp * 0.2);
+          } else {
+            this.player.maxHp += 25;
+            healAmount = Math.round(this.player.maxHp * 0.4);
+          }
           this.player.hp = Math.min(this.player.maxHp, this.player.hp + healAmount);
           this.floatingTexts.push({
             x: this.player.x,
             y: this.player.y - 52,
-            text: `+${healAmount} HP! (MAX ${this.player.maxHp})`,
+            text: this.healLevel >= 30
+              ? `+${healAmount} HP! (20% HEAL)`
+              : `+${healAmount} HP! (MAX ${this.player.maxHp})`,
             color: '#7BE092',
             scale: 1.2,
             vy: -45,
