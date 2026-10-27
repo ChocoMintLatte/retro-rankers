@@ -6,7 +6,7 @@
  * ============================================================================
  *
  * Strict Specification Compliance:
- * - Canvas Layout: 600x750 (Virtual Scrolling Arena 1800x1800)
+ * - Canvas Layout: 600x750 (Virtual Scrolling Arena 5400x5400)
  * - Camera: Clamped tracking following player (this.camX, this.camY)
  * - Tiled Ground: #18243E / #1E2D4D checkerboard tiles with grass/pebble pixel accents
  *   and glowing arena boundary #5B78AD
@@ -24,7 +24,7 @@
  *   - Pixel Bat (#B388EB Lavender, fast, low HP)
  *   - Slime (#7BE092 Mint, medium speed/HP)
  *   - Skeleton Knight (#E2E8F0 Silver, higher HP)
- *   - Elite Boss Demon (#F2546D Rose-Red, crown, horns & boss HP bar, spawns every 20s)
+ *   - Elite Boss Demon (#F2546D Rose-Red, crown, horns & boss HP bar, spawns every 30s)
  * - EXP Gems & Magnet:
  *   - Sky-Blue (+1 EXP), Mint (+3 EXP), Gold (+8 EXP), Pink Heart (+25 HP)
  *   - Magnet attraction within 100px (upgradable)
@@ -41,8 +41,8 @@
   'use strict';
 
   // Arena & Viewport Constants
-  const WORLD_W = 1800;
-  const WORLD_H = 1800;
+  const WORLD_W = 5400;
+  const WORLD_H = 5400;
   const VIEW_W = 600;
   const VIEW_H = 750;
   const TILE_SIZE = 60;
@@ -223,7 +223,7 @@
       // Level & EXP Progress
       this.level = 1;
       this.exp = 0;
-      this.nextExp = 11;
+      this.nextExp = 10;
 
       // Game Stats
       this.score = 0;
@@ -877,11 +877,17 @@
     // -------------------------------------------------------------
     _updateSpawner(dt) {
       this.enemySpawnTimer += dt;
+      this.bossTimer += dt;
+      if (this.bossTimer >= 30) {
+        this.bossTimer -= 30;
+        this.bossCount++;
+        this._spawnEliteBoss();
+      }
 
       // Spawn rate ramps up with level and survival time (1.584x steeper slope)
       const levelRamp = (this.level - 1) * (0.025 * 1.584);
       const timeRamp = this.timeSurvived * (0.007 * 1.584);
-      const spawnInterval = Math.max(0.14, 0.82 - levelRamp - timeRamp);
+      const spawnInterval = Math.max(0.14, 0.90 - levelRamp - timeRamp);
 
       if (this.enemySpawnTimer >= spawnInterval) {
         this.enemySpawnTimer = 0;
@@ -912,8 +918,8 @@
       let type = 'bat';
       const roll = Math.random();
 
-      if (effectiveProgress < 25) {
-        type = roll < 0.75 ? 'bat' : 'slime';
+      if (effectiveProgress < 28) {
+        type = roll < 0.82 ? 'bat' : 'slime';
       } else if (effectiveProgress < 60) {
         if (roll < 0.45) type = 'bat';
         else if (roll < 0.8) type = 'slime';
@@ -929,10 +935,10 @@
     }
 
     _createEnemy(type, x, y) {
-      // Level & time difficulty scaling boosted by an additional +10% (1.44x slope + 15% base boost * 1.1)
-      const hpScale = (1.15 + ((this.level - 1) * 0.12 + this.timeSurvived * 0.012) * 1.44) * 1.1;
-      const speedScale = Math.min(1.70, (1.05 + (this.level - 1) * (0.015 * 1.44)) * 1.1);
-      const dmgScale = (1.15 + (this.level - 1) * (0.05 * 1.44)) * 1.1;
+      // Early-game base lowered by 10%, mid/late-game slope kept at 1.584x (1.44 * 1.1)
+      const hpScale = 1.14 + ((this.level - 1) * 0.12 + this.timeSurvived * 0.012) * 1.584;
+      const speedScale = Math.min(1.70, 1.04 + (this.level - 1) * (0.015 * 1.584));
+      const dmgScale = 1.14 + (this.level - 1) * (0.05 * 1.584);
 
       switch (type) {
         case 'bat':
@@ -1322,10 +1328,6 @@
     _triggerLevelUp() {
       this.exp -= this.nextExp;
       this.level++;
-      if (this.level % 5 === 0) {
-        this.bossCount++;
-        this._spawnEliteBoss();
-      }
       // Crisp EXP scaling curve (balanced 1.375x)
       this.nextExp = Math.floor((8 + this.level * 5) * 1.375);
 
