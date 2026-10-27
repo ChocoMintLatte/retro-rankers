@@ -401,9 +401,10 @@
      * @param {number} score
      * @param {number} durationMs
      * @param {object} [gameLog]
+     * @param {string} [gameId]
      * @returns {{ valid: boolean, reason: string }}
      */
-    validateScore(score, durationMs, gameLog) {
+    validateScore(score, durationMs, gameLog, gameId) {
       // 1. Basic Type & Range Check
       if (score === null || score === undefined || typeof score !== 'number' || isNaN(score)) {
         return { valid: false, reason: '유효하지 않은 점수 형식 (Invalid Score Type)' };
@@ -413,21 +414,26 @@
         return { valid: false, reason: '음수 점수 감지 (Negative Score Detected)' };
       }
 
-      if (score > 999999) {
-        return { valid: false, reason: '점수 한계치(999,999) 초과 (Exceeded Max Score)' };
+      const resolvedGameId = gameId || (gameLog && gameLog.gameId) || (this.activeSession && this.activeSession.gameId) || '';
+      const isHighLimitGame = resolvedGameId === 'mathRunner' || resolvedGameId === 'survivor';
+      const maxScore = isHighLimitGame ? 99999999 : 999999;
+
+      if (score > maxScore) {
+        return { valid: false, reason: `점수 한계치(${maxScore.toLocaleString('en-US')}) 초과 (Exceeded Max Score)` };
       }
 
       const durMs = Math.max(0, Number(durationMs) || 0);
 
       // 2. Impossible Speed Check (e.g., >3,000 pts in under 2 seconds)
-      if (durMs < 2000 && score > 3000) {
+      const instantLimit = isHighLimitGame ? 30000 : 3000;
+      if (durMs < 2000 && score > instantLimit) {
         return { valid: false, reason: '비정상적인 초고속 득점 감지 (Instant High Score)' };
       }
 
       // 3. Score-to-Time Ratio Rate Limit Check
       // Generous threshold: 15,000 pts / sec allows extreme arcade combos but blocks memory-hacked 990,000 pts in 3s
       const durationSec = Math.max(durMs / 1000, 1);
-      const maxAllowedPerSec = 15000;
+      const maxAllowedPerSec = isHighLimitGame ? 500000 : 15000;
       const rate = score / durationSec;
 
       if (rate > maxAllowedPerSec) {
@@ -448,7 +454,7 @@
      * @returns {{ valid: boolean, rank: number|null, entryId: string|null, reason: string }}
      */
     submitScore(gameId, initials, score, durationMs, gameLog, stage) {
-      const validation = this.validateScore(score, durationMs, gameLog);
+      const validation = this.validateScore(score, durationMs, gameLog, gameId);
 
       if (!validation.valid) {
         return {

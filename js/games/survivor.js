@@ -223,7 +223,7 @@
       // Level & EXP Progress
       this.level = 1;
       this.exp = 0;
-      this.nextExp = 10;
+      this.nextExp = 11;
 
       // Game Stats
       this.score = 0;
@@ -878,10 +878,10 @@
     _updateSpawner(dt) {
       this.enemySpawnTimer += dt;
 
-      // Spawn rate ramps up with level and survival time (1.44x steeper slope)
-      const levelRamp = (this.level - 1) * (0.025 * 1.44); // 0.036s faster per level
-      const timeRamp = this.timeSurvived * (0.007 * 1.44); // 0.01008s faster per sec
-      const spawnInterval = Math.max(0.15, 0.90 - levelRamp - timeRamp);
+      // Spawn rate ramps up with level and survival time (1.584x steeper slope)
+      const levelRamp = (this.level - 1) * (0.025 * 1.584);
+      const timeRamp = this.timeSurvived * (0.007 * 1.584);
+      const spawnInterval = Math.max(0.14, 0.82 - levelRamp - timeRamp);
 
       if (this.enemySpawnTimer >= spawnInterval) {
         this.enemySpawnTimer = 0;
@@ -907,8 +907,8 @@
       sx = clamp(sx, 40, WORLD_W - 40);
       sy = clamp(sy, 40, WORLD_H - 40);
 
-      // Determine enemy type based on survival time and level (1.44x progress scaling)
-      const effectiveProgress = (this.timeSurvived + (this.level - 1) * 6) * 1.44;
+      // Determine enemy type based on survival time and level (1.584x progress scaling)
+      const effectiveProgress = (this.timeSurvived + (this.level - 1) * 6) * 1.584;
       let type = 'bat';
       const roll = Math.random();
 
@@ -929,10 +929,10 @@
     }
 
     _createEnemy(type, x, y) {
-      // Level & time difficulty scaling boosted by an additional +20% (1.44x slope + 15% base boost)
-      const hpScale = 1.15 + ((this.level - 1) * 0.12 + this.timeSurvived * 0.012) * 1.44;
-      const speedScale = Math.min(1.55, 1.05 + (this.level - 1) * (0.015 * 1.44));
-      const dmgScale = 1.15 + (this.level - 1) * (0.05 * 1.44);
+      // Level & time difficulty scaling boosted by an additional +10% (1.44x slope + 15% base boost * 1.1)
+      const hpScale = (1.15 + ((this.level - 1) * 0.12 + this.timeSurvived * 0.012) * 1.44) * 1.1;
+      const speedScale = Math.min(1.70, (1.05 + (this.level - 1) * (0.015 * 1.44)) * 1.1);
+      const dmgScale = (1.15 + (this.level - 1) * (0.05 * 1.44)) * 1.1;
 
       switch (type) {
         case 'bat':
@@ -994,9 +994,9 @@
       const sx = clamp(p.x + Math.cos(angle) * 380, 60, WORLD_W - 60);
       const sy = clamp(p.y + Math.sin(angle) * 380, 60, WORLD_H - 60);
 
-      const bossHp = Math.floor((420 + this.bossCount * 312 + (this.level - 1) * 30) * 1.2);
-      const bossSpeed = Math.min(128, Math.round(92 + (this.bossCount - 1) * 6));
-      const bossTouchDmg = Math.round((28 + (this.bossCount - 1) * 6) * 1.2);
+      const bossHp = Math.floor((420 + this.bossCount * 312 + (this.level - 1) * 30) * 1.32);
+      const bossSpeed = Math.min(141, Math.round((92 + (this.bossCount - 1) * 6) * 1.1));
+      const bossTouchDmg = Math.round((28 + (this.bossCount - 1) * 6) * 1.32);
 
       const boss = {
         type: 'boss',
@@ -1326,8 +1326,8 @@
         this.bossCount++;
         this._spawnEliteBoss();
       }
-      // Crisp EXP scaling curve (balanced 1.25x)
-      this.nextExp = Math.floor((8 + this.level * 5) * 1.25);
+      // Crisp EXP scaling curve (balanced 1.375x)
+      this.nextExp = Math.floor((8 + this.level * 5) * 1.375);
 
       // Score reward
       const levelBonus = 400 * this.level;

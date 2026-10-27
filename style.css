@@ -50,6 +50,10 @@
   user-select: none;
 }
 
+html {
+  font-size: clamp(13px, min(1.05vw, 1.75vh), 18px);
+}
+
 html, body {
   width: 100vw;
   height: 100vh;
@@ -213,6 +217,8 @@ html, body {
   overflow: hidden;
   padding: 12px;
   gap: 12px;
+  min-width: 0;
+  min-height: 0;
 }
 
 /* Section Shared Headers */
@@ -224,6 +230,8 @@ html, body {
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 4px 0 #121B30;
+  min-width: 0;
+  min-height: 0;
 }
 
 .section-title-bar {
@@ -265,12 +273,13 @@ html, body {
    ========================================================================== */
 .left-panel {
   width: 20%;
-  min-width: 240px;
+  min-width: clamp(190px, 21vw, 260px);
   max-width: 380px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   height: 100%;
+  min-height: 0;
 }
 
 .cartridge-section {
@@ -280,8 +289,8 @@ html, body {
 .cartridge-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px;
+  gap: clamp(3px, 0.6vh, 6px);
+  padding: clamp(4px, 0.7vh, 8px);
 }
 
 /* Cartridge Item UI */
@@ -289,7 +298,7 @@ html, body {
   background: var(--bg-card);
   border: 2px solid #425A8A;
   border-radius: 4px;
-  padding: 7px 9px;
+  padding: clamp(4px, 0.65vh, 7px) clamp(6px, 0.6vw, 9px);
   cursor: pointer;
   position: relative;
   display: flex;
@@ -405,9 +414,11 @@ html, body {
 
 .control-row {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding-bottom: 5px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-bottom: clamp(3px, 0.5vh, 5px);
   border-bottom: 1px dashed #3A4E78;
 }
 
@@ -419,6 +430,7 @@ html, body {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .keycap {
@@ -444,6 +456,10 @@ html, body {
   font-size: 0.8rem;
   color: var(--text-main);
   line-height: 1.35;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ==========================================================================
@@ -457,6 +473,8 @@ html, body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 
 /* CRT Cabinet Bezel */
@@ -478,6 +496,8 @@ html, body {
   justify-content: center;
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 
 /* CRT Screen Tube Inner */
@@ -492,6 +512,8 @@ html, body {
   align-items: center;
   justify-content: center;
   box-shadow: inset 0 0 30px rgba(18, 27, 48, 0.8);
+  min-width: 0;
+  min-height: 0;
 }
 
 /* Soft Scanlines Effect */
@@ -545,6 +567,8 @@ html, body {
 
 /* HTML5 Canvas */
 #gameCanvas {
+  width: auto;
+  height: 100%;
   max-height: 100%;
   max-width: 100%;
   aspect-ratio: 4 / 5;
@@ -576,9 +600,11 @@ html, body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 24px;
-  gap: 22px;
+  padding: clamp(12px, 2.5vh, 24px);
+  gap: clamp(10px, 2vh, 22px);
   max-width: 460px;
+  max-height: 96%;
+  overflow-y: auto;
 }
 
 .attract-tag {
@@ -676,13 +702,15 @@ html, body {
   border: 3px solid var(--neon-magenta);
   box-shadow: 4px 4px 0px #121B30;
   border-radius: 8px;
-  padding: 24px 20px;
+  padding: clamp(12px, 2.2vh, 24px) clamp(12px, 2vw, 20px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: clamp(8px, 1.6vh, 16px);
   max-width: 440px;
   width: 90%;
+  max-height: 96%;
+  overflow-y: auto;
   text-align: center;
 }
 
@@ -821,12 +849,13 @@ html, body {
    ========================================================================== */
 .right-panel {
   width: 25%;
-  min-width: 290px;
+  min-width: clamp(220px, 25vw, 300px);
   max-width: 460px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   height: 100%;
+  min-height: 0;
 }
 
 /* Leaderboard Section */
@@ -839,7 +868,7 @@ html, body {
 
 .leaderboard-table-header {
   display: grid;
-  grid-template-columns: 54px 66px 1fr 66px;
+  grid-template-columns: minmax(32px, 0.65fr) minmax(38px, 0.75fr) minmax(76px, 1.7fr) minmax(42px, 0.9fr);
   padding: 8px 10px;
   background: #202F52;
   border-bottom: 2px solid var(--border-color);
@@ -854,7 +883,7 @@ html, body {
   display: flex;
   flex-direction: column;
   padding: 6px 8px;
-  gap: 5px;
+  gap: clamp(2px, 0.45vh, 5px);
 }
 
 .leaderboard-empty {
@@ -911,9 +940,9 @@ html, body {
 /* Rank Rows */
 .rank-row {
   display: grid;
-  grid-template-columns: 54px 66px 1fr 66px;
+  grid-template-columns: minmax(32px, 0.65fr) minmax(38px, 0.75fr) minmax(76px, 1.7fr) minmax(42px, 0.9fr);
   align-items: center;
-  padding: 7px 8px;
+  padding: clamp(3px, 0.55vh, 7px) 8px;
   background: var(--bg-card);
   border: 1px solid #3E5482;
   border-radius: 3px;
@@ -926,26 +955,42 @@ html, body {
   background: var(--bg-card-hover);
 }
 
-.rank-row .col-rank {
+.rank-row .col-rank,
+.leaderboard-table-header .col-rank {
   color: var(--text-dim);
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.rank-row .col-init {
+.rank-row .col-init,
+.leaderboard-table-header .col-init {
   color: var(--text-main);
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.rank-row .col-score {
+.rank-row .col-score,
+.leaderboard-table-header .col-score {
   color: var(--neon-cyan);
   text-align: right;
   padding-right: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.rank-row .col-date {
+.rank-row .col-date,
+.leaderboard-table-header .col-date {
   color: var(--text-dim);
   font-size: 0.58rem;
   text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Top 3 High Ranks Styling */
@@ -1005,7 +1050,7 @@ html, body {
 /* Live Feed Ticker Section */
 .livefeed-section {
   flex: 0 0 auto;
-  max-height: 210px;
+  max-height: clamp(110px, 20vh, 210px);
   display: flex;
   flex-direction: column;
 }
@@ -1087,4 +1132,293 @@ html, body {
 .neon-text-gold {
   color: var(--neon-gold);
   text-shadow: 1px 1px 0px #121B30, 0 0 4px rgba(244, 197, 82, 0.4);
+}
+
+/* ==========================================================================
+   8. Responsive Media Queries for Low Resolutions & High-DPI Scaling
+   (1366x768, 1280x720, 1024x768, or high-DPI 125%/150% scaled displays)
+   ========================================================================== */
+
+@media screen and (max-width: 1366px), screen and (max-height: 820px) {
+  .arcade-cabinet {
+    border-width: 2px;
+  }
+
+  .arcade-header {
+    height: 48px;
+    min-height: 48px;
+    padding: 0 16px;
+  }
+
+  .marquee-title {
+    font-size: 1.12rem;
+    letter-spacing: 1.2px;
+  }
+
+  .marquee-subtitle {
+    font-size: 0.52rem;
+  }
+
+  .credit-badge {
+    padding: 4px 12px;
+    font-size: 0.62rem;
+    gap: 6px;
+  }
+
+  .arcade-btn {
+    padding: 6px 11px;
+    font-size: 0.58rem;
+  }
+
+  .arcade-main {
+    height: calc(100vh - 48px);
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .left-panel {
+    width: 22%;
+    min-width: clamp(185px, 22vw, 250px);
+    gap: 8px;
+  }
+
+  .center-panel {
+    width: 51%;
+  }
+
+  .right-panel {
+    width: 27%;
+    min-width: clamp(215px, 27vw, 290px);
+    gap: 8px;
+  }
+
+  .crt-bezel {
+    border-width: 6px;
+    padding: 6px;
+    border-radius: 12px;
+  }
+
+  .section-title-bar {
+    padding: 5px 8px;
+    gap: 6px;
+  }
+
+  .section-badge {
+    font-size: 0.5rem;
+    padding: 3px 6px;
+  }
+
+  .section-title {
+    font-size: 0.66rem;
+  }
+
+  .cartridge-item {
+    padding: 5px 7px;
+  }
+
+  .cartridge-id {
+    font-size: 0.66rem;
+  }
+
+  .cartridge-name {
+    font-size: 0.6rem;
+  }
+
+  .cartridge-desc {
+    font-size: 0.62rem;
+  }
+
+  .keycap {
+    min-width: 22px;
+    height: 20px;
+    font-size: 0.54rem;
+    padding: 2px 4px;
+  }
+
+  .key-desc {
+    font-size: 0.72rem;
+  }
+
+  .leaderboard-table-header {
+    padding: 5px 8px;
+    font-size: 0.52rem;
+  }
+
+  .rank-row {
+    padding: 4px 6px;
+    font-size: 0.6rem;
+  }
+
+  .rank-row .col-score {
+    padding-right: 4px;
+  }
+
+  .livefeed-section {
+    max-height: clamp(100px, 18vh, 160px);
+  }
+
+  .live-feed-list {
+    padding: 6px 8px;
+    gap: 5px;
+    max-height: clamp(70px, 13vh, 120px);
+  }
+
+  .feed-item {
+    font-size: 0.72rem;
+    gap: 6px;
+  }
+
+  .feed-time {
+    font-size: 0.52rem;
+  }
+}
+
+@media screen and (max-width: 1100px), screen and (max-height: 700px) {
+  .arcade-cabinet {
+    border-width: 2px;
+  }
+
+  .arcade-header {
+    height: 46px;
+    min-height: 46px;
+    padding: 0 10px;
+  }
+
+  .marquee-title {
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+  }
+
+  .marquee-subtitle {
+    display: none;
+  }
+
+  .credit-badge {
+    padding: 3px 8px;
+    font-size: 0.55rem;
+    gap: 4px;
+  }
+
+  .arcade-btn {
+    padding: 4px 8px;
+    font-size: 0.54rem;
+  }
+
+  .arcade-main {
+    height: calc(100vh - 46px);
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .left-panel {
+    width: 22%;
+    min-width: clamp(175px, 22vw, 235px);
+    gap: 6px;
+  }
+
+  .center-panel {
+    width: 51%;
+  }
+
+  .right-panel {
+    width: 27%;
+    min-width: clamp(205px, 27vw, 275px);
+    gap: 6px;
+  }
+
+  .crt-bezel {
+    border-width: 4px;
+    padding: 4px;
+    border-radius: 8px;
+  }
+
+  .section-title-bar {
+    padding: 4px 6px;
+  }
+
+  .section-badge {
+    font-size: 0.46rem;
+    padding: 2px 4px;
+  }
+
+  .section-title {
+    font-size: 0.6rem;
+  }
+
+  .cartridge-list {
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .cartridge-item {
+    padding: 4px 5px;
+    gap: 1px;
+  }
+
+  .cartridge-id {
+    font-size: 0.6rem;
+  }
+
+  .cartridge-name {
+    font-size: 0.56rem;
+  }
+
+  .cartridge-desc {
+    font-size: 0.56rem;
+  }
+
+  .controls-guide-box {
+    padding: 4px 6px;
+    gap: 3px;
+  }
+
+  .control-row {
+    padding-bottom: 2px;
+    gap: 4px;
+  }
+
+  .keycap {
+    min-width: 18px;
+    height: 17px;
+    font-size: 0.48rem;
+    padding: 1px 3px;
+  }
+
+  .key-desc {
+    font-size: 0.65rem;
+  }
+
+  .leaderboard-table-header {
+    padding: 4px 6px;
+    font-size: 0.48rem;
+  }
+
+  .leaderboard-body {
+    padding: 4px;
+    gap: 2px;
+  }
+
+  .rank-row {
+    padding: 3px 4px;
+    font-size: 0.54rem;
+  }
+
+  .livefeed-section {
+    max-height: clamp(80px, 16vh, 120px);
+  }
+
+  .live-feed-list {
+    padding: 4px 6px;
+    gap: 4px;
+    max-height: clamp(55px, 11vh, 90px);
+  }
+
+  .feed-item {
+    font-size: 0.65rem;
+    gap: 4px;
+  }
+
+  .feed-time {
+    font-size: 0.46rem;
+  }
 }

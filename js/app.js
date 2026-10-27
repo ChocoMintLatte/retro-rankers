@@ -658,7 +658,7 @@
 
       // Anti-Cheat Pre-validation
       const validation = window.rankingService
-        ? window.rankingService.validateScore(scoreNum, durMs, gameLog)
+        ? window.rankingService.validateScore(scoreNum, durMs, gameLog, this.selectedGame)
         : { valid: true, reason: 'VERIFIED' };
 
       // Cache pending result for submission

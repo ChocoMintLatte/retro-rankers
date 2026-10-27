@@ -197,6 +197,7 @@
 
       // Game Log summary
       this.gameLog = {
+        gameId: 'mathRunner',
         score: 0,
         wave: 1,
         maxPower: 10,
@@ -731,6 +732,7 @@
       this.isRunning = false;
 
       this.gameLog = {
+        gameId: 'mathRunner',
         score: Math.floor(this.score),
         wave: this.wave,
         maxPower: this.maxPower,

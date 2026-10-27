@@ -12,17 +12,17 @@
  *   - Scrolling background stars, pixel clouds, celestial moon, and height ruler markers (10F, 20F, 30F...)
  * - Core Stack Mechanics:
  *   - Base block at bottom: width = 240, height = 28, centered at x = 300, y = 650
- *   - Sliding block speed: 220 + Math.min(this.floor * 11, 320) px/s
+ *   - Sliding block speed: 181.5 + Math.min(this.floor * 9.1, 264) px/s
  *   - Drop triggers: Space, ArrowDown, KeyS, Enter, or Canvas Touch / Click
  *   - Case 1: Complete Miss (overlap <= 0):
  *       Active block tumbles down as falling piece; triggers triggerGameOver()
  *       Calls callbacks.onGameOver(score, { gameId: 'stack', stage: `${floor}F`, floor, maxCombo })
- *   - Case 2: PERFECT Drop (|active.x - top.x| <= 5):
+ *   - Case 2: PERFECT Drop (|active.x - top.x| <= 6):
  *       Snaps active.x = top.x with NO width loss!
  *       combo++, maxCombo update
  *       Score: 1200 + floor * 150 + combo * 350 pts
  *       Sound: playPowerUp(), pastel shockwave flash, floating text "PERFECT x{combo}!"
- *       Combo Width Recovery: If combo >= 3 and width < 240, widens by +14px (max 240) + "SIZE UP! +14px"
+ *       Combo Width Recovery: If combo >= 3 and width < 240, widens by +16px (max 240) + "SIZE UP! +16px"
  *   - Case 3: Normal Hit / Slice (overlap > 0):
  *       combo = 0; trims placed block to overlapping segment (newX, newWidth = overlap)
  *       Spawns cut-off piece with gravity, horizontal impulse & rotation into fallingPieces
@@ -298,7 +298,7 @@
       const width = top.width;
 
       // Speed scales up smoothly with floor
-      const speed = 220 + Math.min(this.floor * 11, 320);
+      const speed = 181.5 + Math.min(this.floor * 9.1, 264);
 
       // Color cycles through the 7-color Patch Pastel Palette
       const color = this.palette[targetFloor % this.palette.length];
@@ -371,9 +371,9 @@
       }
 
       // -----------------------------------------------------------
-      // CASE 2: PERFECT DROP (Math.abs(active.x - top.x) <= 5)
+      // CASE 2: PERFECT DROP (Math.abs(active.x - top.x) <= 6)
       // -----------------------------------------------------------
-      if (Math.abs(active.x - top.x) <= 5) {
+      if (Math.abs(active.x - top.x) <= 6) {
         // Snap active.x = top.x with NO width loss
         const snappedX = top.x;
         let finalWidth = active.width;
@@ -413,11 +413,11 @@
           1.25
         );
 
-        // Combo Width Recovery: If combo >= 3 and active.width < 240, widens by +14px
+        // Combo Width Recovery: If combo >= 3 and active.width < 240, widens by +16px
         if (this.combo >= 3 && finalWidth < 240) {
-          finalWidth = Math.min(240, finalWidth + 14);
+          finalWidth = Math.min(240, finalWidth + 16);
           this.spawnFloatingText(
-            'SIZE UP! +14px',
+            'SIZE UP! +16px',
             snappedX,
             active.y - 42,
             '#7BE092',
