@@ -3,6 +3,9 @@
 > **컴퓨터공학과 학과 축제 아케이드 부스를 위한 올인원 웹 레트로 오락실 플랫폼**  
 > 전자오락수호대 **'패치(Patch)'** 테마의 파스텔 픽셀 아트와 아케이드 CRT 모니터 감성을 담은 5종 미니게임 컬렉션입니다.
 
+### 🚀 라이브 플레이 (Live Demo)
+👉 **[https://retro-rankers.vercel.app/](https://retro-rankers.vercel.app/)** (설치 없이 웹 브라우저에서 바로 플레이 가능!)
+
 ---
 
 ## 📌 1. 프로젝트 소개 (Overview)
@@ -130,11 +133,15 @@ retro-rankers/
 
 ## 🚀 5. 실행 및 운영 가이드 (Getting Started)
 
-### 1. 로컬 단독 실행 (가장 간편한 방법)
+### 0. 웹 배포 링크로 즉시 플레이 (가장 추천)
+별도의 다운로드나 설치 없이 아래 공식 배포 링크를 통해 모바일/PC 어디서나 즉시 플레이할 수 있습니다:  
+👉 **[https://retro-rankers.vercel.app/](https://retro-rankers.vercel.app/)**
+
+### 1. 로컬 단독 실행 (오프라인 환경)
 1. `retro-rankers` 폴더의 [`index.html`](file:///C:/Users/Hansung/Desktop/retro-rankers/index.html) 파일을 Chrome, Edge 등 모던 웹 브라우저로 더블 클릭하여 엽니다.
 2. 인터넷 연결 없이도 즉시 모든 게임과 로컬 랭킹 시스템이 작동합니다.
 
-### 2. 로컬 웹 서버로 실행 (권장)
+### 2. 로컬 웹 서버로 실행 (네트워크 테스트)
 동일 네트워크의 다른 기기(태블릿, 모바일)에서 접속 테스트를 하거나 웹 서버 환경에서 구동하려면 아래 명령어를 사용합니다:
 
 ```bash
@@ -167,9 +174,15 @@ python -m http.server 8080
    *(예: `https://my-festival-arcade-default-rtdb.firebaseio.com`)*
 4. 각 부스 PC의 브라우저에서 URL 뒤에 `?db=` 파라미터를 붙여 **최초 1회 접속**합니다:
    ```text
+   # 웹 배포 링크인 경우
+   https://retro-rankers.vercel.app/?db=https://my-festival-arcade-default-rtdb.firebaseio.com
+
+   # 로컬 웹 서버인 경우
    http://localhost:8080/?db=https://my-festival-arcade-default-rtdb.firebaseio.com
+
+   # 로컬 파일인 경우
+   file:///.../index.html?db=https://my-festival-arcade-default-rtdb.firebaseio.com
    ```
-   *(로컬 파일인 경우: `file:///.../index.html?db=https://my-festival-arcade-default-rtdb.firebaseio.com`)*
 5. **동기화 완료**: 브라우저의 LocalStorage에 데이터베이스 주소가 영구 저장되므로, 이후에는 파라미터 없이 실행해도 모든 부스 PC 간에 실시간 랭킹과 라이브 피드가 자동 동기화됩니다!
 
 ---
